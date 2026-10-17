@@ -112,7 +112,7 @@ export async function checkReplica(options: ReplicaCheckOptions): Promise<CheckR
           };
           return {
             ok: true,
-            detail: `Restored ${String(sessions.n)} sessions; data matches the live database.`,
+            detail: `Restored ${String(sessions.n)} session${sessions.n === 1 ? "" : "s"}; data matches the live database.`,
           };
         }
         lastProblem = "restored data doesn't match the live database";

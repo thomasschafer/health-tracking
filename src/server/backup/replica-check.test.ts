@@ -83,7 +83,7 @@ describe("checkReplica", () => {
     const result = await check(30_000);
     expect(result).toEqual({
       ok: true,
-      detail: "Restored 1 sessions; data matches the live database.",
+      detail: "Restored 1 session; data matches the live database.",
     });
   }, 40_000);
 

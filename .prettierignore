@@ -1,0 +1,6 @@
+dist
+drizzle
+playwright-report
+test-results
+.tools
+package-lock.json

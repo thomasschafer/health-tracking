@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createApp } from "./app.ts";
 import { backupStatus } from "./backup-status.ts";
+import { scheduleBackupChecks } from "./backup/run-checks.ts";
 import { loadConfig } from "./config.ts";
 import { openDatabase } from "./db/index.ts";
 
@@ -29,7 +30,10 @@ const server = serve({ fetch: app.fetch, hostname: config.host, port: config.por
   );
 });
 
+const stopBackupChecks = scheduleBackupChecks(db, config);
+
 function shutdown(): void {
+  stopBackupChecks();
   server.close();
   db.$client.close();
   process.exit(0);

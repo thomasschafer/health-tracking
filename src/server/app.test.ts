@@ -110,12 +110,20 @@ describe("blood pressure API", () => {
 describe("settings API", () => {
   it("returns defaults and saves changes", async () => {
     expect(await (await app.request("/api/settings")).json()).toEqual({
-      settings: { readingsPerSession: 3 },
+      settings: { readingsPerSession: 3, restTimerSeconds: 60 },
     });
-    const res = await app.request("/api/settings", json("PUT", { readingsPerSession: 1 }));
-    expect(await res.json()).toEqual({ settings: { readingsPerSession: 1 } });
+    const res = await app.request(
+      "/api/settings",
+      json("PUT", { readingsPerSession: 1, restTimerSeconds: 0 }),
+    );
+    expect(await res.json()).toEqual({ settings: { readingsPerSession: 1, restTimerSeconds: 0 } });
     expect(
-      (await app.request("/api/settings", json("PUT", { readingsPerSession: 9 }))).status,
+      (
+        await app.request(
+          "/api/settings",
+          json("PUT", { readingsPerSession: 9, restTimerSeconds: 60 }),
+        )
+      ).status,
     ).toBe(400);
   });
 });

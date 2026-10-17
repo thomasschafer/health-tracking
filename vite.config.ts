@@ -1,8 +1,19 @@
 import react from "@vitejs/plugin-react";
+import { execFileSync } from "node:child_process";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+function appVersion(): string {
+  const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+  const date = new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeZone: "Europe/London",
+  }).format(new Date());
+  return `${commit} · ${date}`;
+}
+
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   build: { outDir: "dist/client", emptyOutDir: true },
   server: {
     proxy: { "/api": "http://127.0.0.1:8787" },
@@ -10,7 +21,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // Updates wait for the user to tap "Update now", so a reload never interrupts entering a reading.
+      registerType: "prompt",
       includeAssets: ["icon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "Health",
@@ -18,8 +30,8 @@ export default defineConfig({
         description: "Personal health tracking",
         start_url: "/",
         display: "standalone",
-        background_color: "#f9f9f7",
-        theme_color: "#2a78d6",
+        background_color: "#f2f2f7",
+        theme_color: "#f2f2f7",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

@@ -29,7 +29,7 @@ function seeded(): Db {
     );
   }
   deleteSession(db, ids[1] ?? "", now);
-  saveSettings(db, { readingsPerSession: 2 });
+  saveSettings(db, { readingsPerSession: 2, restTimerSeconds: 30 });
   return db;
 }
 

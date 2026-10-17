@@ -1,25 +1,49 @@
+import {
+  CloudCheck,
+  CloudOff,
+  Download,
+  HardDrive,
+  Info,
+  ListOrdered,
+  Timer,
+  TriangleAlert,
+} from "lucide-react";
 import { useState } from "react";
 import { BACKUP_KIND_LABELS, BACKUP_KINDS, type BackupKindStatus } from "../../shared/backup.ts";
-import { MAX_READINGS_PER_SESSION } from "../../shared/bp.ts";
+import { averageReadings, MAX_READINGS_PER_SESSION } from "../../shared/bp.ts";
+import { REST_TIMER_OPTIONS } from "../../shared/settings.ts";
 import { formatDate, formatTime } from "../../shared/time.ts";
 import { useData } from "../data.tsx";
 import { formatAgo, formatBp } from "../format.ts";
-import { averageReadings } from "../../shared/bp.ts";
+import { List, ListRow } from "../ui/List.tsx";
+import { Page, Section } from "../ui/Page.tsx";
+import { Segmented } from "../ui/Segmented.tsx";
+import { ConfirmSheet } from "../ui/Sheet.tsx";
 
-function describeBackup(status: BackupKindStatus): string {
+function describeBackup(status: BackupKindStatus): { text: string; ok: boolean } {
   switch (status.state) {
     case "not-configured":
-      return "Not set up yet.";
+      return { text: "Not set up yet", ok: false };
     case "ok":
-      return `Verified ${formatAgo(status.checkedAt)}.`;
+      return { text: `Verified ${formatAgo(status.checkedAt)}`, ok: true };
     case "failing":
-      return `Last check failed ${formatAgo(status.checkedAt)}: ${status.detail}`;
+      return { text: `Check failed ${formatAgo(status.checkedAt)}: ${status.detail}`, ok: false };
     case "stale":
-      return status.lastOkAt === null
-        ? "Never verified."
-        : `Not verified since ${formatAgo(status.lastOkAt)}.`;
+      return {
+        text:
+          status.lastOkAt === null
+            ? "Never verified"
+            : `Not verified since ${formatAgo(status.lastOkAt)}`,
+        ok: false,
+      };
   }
 }
+
+const icon = (Icon: typeof Timer, color: string) => (
+  <span className="category-icon" style={{ background: color }}>
+    <Icon size={16} color="white" aria-hidden="true" />
+  </span>
+);
 
 export function SettingsPage() {
   const {
@@ -30,8 +54,11 @@ export function SettingsPage() {
     retryPending,
     discardPending,
     connection,
+    sessions,
   } = useData();
   const [error, setError] = useState<string | null>(null);
+  const [discarding, setDiscarding] = useState<string | null>(null);
+  const offline = connection !== "online";
 
   const run = (action: () => Promise<void>) => {
     setError(null);
@@ -41,108 +68,178 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="stack">
-      <h1>Settings</h1>
-      {error !== null && <p className="field-error">{error}</p>}
+    <Page title="Settings">
+      {error !== null && <p className="entry-error">{error}</p>}
 
-      <h2>Blood pressure</h2>
-      <div className="card stack">
-        <div className="field">
-          <span className="label" id="readings-label">
-            Readings per session
-          </span>
-          <div className="segmented" role="group" aria-labelledby="readings-label">
-            {Array.from({ length: MAX_READINGS_PER_SESSION }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={settings.readingsPerSession === n}
-                disabled={connection !== "online"}
-                onClick={() => {
-                  run(() => saveSettings({ ...settings, readingsPerSession: n }));
-                }}
-              >
-                {n}
-              </button>
-            ))}
+      <Section
+        title="Blood pressure"
+        footer={
+          offline
+            ? "Settings can be changed when the laptop is reachable."
+            : "A short rest between readings makes them more consistent. You can still add or remove readings while entering a session."
+        }
+      >
+        <List>
+          <div className="list-row stacked">
+            <span className="list-row-top">
+              {icon(ListOrdered, "var(--bp)")}
+              <span className="list-title" id="readings-label">
+                Readings per session
+              </span>
+            </span>
+            <Segmented
+              label="Readings per session"
+              options={Array.from({ length: MAX_READINGS_PER_SESSION }, (_, i) => ({
+                value: i + 1,
+                label: String(i + 1),
+              }))}
+              value={settings.readingsPerSession}
+              disabled={offline}
+              onChange={(n) => {
+                run(() => saveSettings({ ...settings, readingsPerSession: n }));
+              }}
+            />
           </div>
-          <span className="muted small">
-            You can still add or remove readings when entering a session.
-          </span>
-        </div>
-      </div>
+          <div className="list-row stacked">
+            <span className="list-row-top">
+              {icon(Timer, "var(--bp)")}
+              <span className="list-title">Rest between readings</span>
+            </span>
+            <Segmented
+              label="Rest between readings"
+              options={REST_TIMER_OPTIONS.map((s) => ({
+                value: s,
+                label: s === 0 ? "Off" : `${String(s)}s`,
+              }))}
+              value={settings.restTimerSeconds}
+              disabled={offline}
+              onChange={(s) => {
+                run(() => saveSettings({ ...settings, restTimerSeconds: s }));
+              }}
+            />
+          </div>
+        </List>
+      </Section>
 
-      <h2 id="sync">Unsynced readings</h2>
-      <div className="card stack">
-        {pending.length === 0 ? (
-          <p className="muted" style={{ margin: 0 }}>
-            Everything on this device has synced.
-          </p>
-        ) : (
-          pending.map((p) => {
-            const takenAt = new Date(p.input.takenAt);
-            return (
-              <div key={p.input.id} className="stack" style={{ gap: 6 }}>
-                <div>
-                  <strong className="tabular">{formatBp(averageReadings(p.input.readings))}</strong>{" "}
-                  <span className="secondary small">
-                    {formatDate(takenAt)} {formatTime(takenAt)}
+      {pending.length > 0 && (
+        <Section title="Waiting to sync">
+          <List>
+            {pending.map((p) => {
+              const takenAt = new Date(p.input.takenAt);
+              return p.rejection === null ? (
+                <ListRow
+                  key={p.input.id}
+                  icon={icon(CloudOff, "var(--status-warning)")}
+                  title={formatBp(averageReadings(p.input.readings))}
+                  detail={`${formatDate(takenAt)}, ${formatTime(takenAt)} · waiting for the laptop`}
+                />
+              ) : (
+                <div key={p.input.id} className="list-row stacked">
+                  <span className="list-row-top">
+                    {icon(TriangleAlert, "var(--status-critical)")}
+                    <span className="list-text">
+                      <span className="list-title">
+                        {formatBp(averageReadings(p.input.readings))}
+                      </span>
+                      <span className="list-detail">
+                        {formatDate(takenAt)}, {formatTime(takenAt)} · rejected: {p.rejection}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="button small"
+                      onClick={() => {
+                        run(() => retryPending(p.input.id));
+                      }}
+                    >
+                      Retry
+                    </button>
+                    <button
+                      type="button"
+                      className="button small destructive-text"
+                      onClick={() => {
+                        setDiscarding(p.input.id);
+                      }}
+                    >
+                      Discard
+                    </button>
                   </span>
                 </div>
-                {p.rejection === null ? (
-                  <span className="secondary small">Waiting for the laptop.</span>
-                ) : (
-                  <>
-                    <span className="field-error">Rejected by the server: {p.rejection}</span>
-                    <div className="row">
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => {
-                          run(() => retryPending(p.input.id));
-                        }}
-                      >
-                        Retry
-                      </button>
-                      <button
-                        type="button"
-                        className="button danger"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Permanently discard this reading? It only exists on this device.",
-                            )
-                          ) {
-                            run(() => discardPending(p.input.id));
-                          }
-                        }}
-                      >
-                        Discard
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+              );
+            })}
+          </List>
+        </Section>
+      )}
 
-      <h2 id="backups">Backups</h2>
-      <div className="card stack">
-        {backupStatus === null ? (
-          <p className="muted" style={{ margin: 0 }}>
-            Backup status is unavailable while the laptop can't be reached.
-          </p>
-        ) : (
-          BACKUP_KINDS.map((kind) => (
-            <div key={kind}>
-              <strong>{BACKUP_KIND_LABELS[kind]}</strong>
-              <div className="secondary small">{describeBackup(backupStatus[kind])}</div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+      <Section
+        title="Data"
+        footer="Backups are checked every day by restoring them and comparing against your data."
+      >
+        <List>
+          <span id="backups" />
+          {backupStatus === null ? (
+            <ListRow
+              icon={icon(CloudOff, "var(--text-3)")}
+              title="Backups"
+              detail="Status unavailable while the laptop is unreachable"
+            />
+          ) : (
+            BACKUP_KINDS.map((kind) => {
+              const { text, ok } = describeBackup(backupStatus[kind]);
+              return (
+                <ListRow
+                  key={kind}
+                  icon={icon(
+                    ok ? CloudCheck : TriangleAlert,
+                    ok ? "var(--status-good)" : "var(--status-warning)",
+                  )}
+                  title={BACKUP_KIND_LABELS[kind]}
+                  detail={text}
+                />
+              );
+            })
+          )}
+          <ListRow
+            icon={icon(Download, "var(--text-3)")}
+            title="Export blood pressure"
+            detail="CSV of every reading, for a spreadsheet or your GP"
+            href="/api/bp/export.csv"
+          />
+          <ListRow
+            icon={icon(HardDrive, "var(--text-3)")}
+            title="Stored on your laptop"
+            detail={`${String(sessions.length)} blood pressure sessions`}
+          />
+        </List>
+      </Section>
+
+      <Section title="About">
+        <List>
+          <ListRow
+            icon={icon(Info, "var(--text-3)")}
+            title="Version"
+            value={<span className="tabular">{__APP_VERSION__}</span>}
+          />
+        </List>
+      </Section>
+
+      <ConfirmSheet
+        open={discarding !== null}
+        title="Discard this reading?"
+        message="It only exists on this device, so it will be gone for good."
+        confirmLabel="Discard"
+        destructive
+        onConfirm={() => {
+          const id = discarding;
+          setDiscarding(null);
+          if (id !== null) run(() => discardPending(id));
+        }}
+        onCancel={() => {
+          setDiscarding(null);
+        }}
+      />
+    </Page>
   );
 }

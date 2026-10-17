@@ -1,0 +1,77 @@
+import { CloudCheck, Plus } from "lucide-react";
+import { Link } from "react-router";
+import { useData } from "../data.tsx";
+import { formatAgo } from "../format.ts";
+import { CATEGORIES } from "../categories/registry.tsx";
+import { Page, Section } from "../ui/Page.tsx";
+
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/London",
+});
+
+function greeting(now: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "Europe/London",
+    }).format(now),
+  );
+  if (hour >= 4 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function BackupFooter() {
+  const { backupStatus } = useData();
+  if (backupStatus === null) return null;
+  const { replica, export: driveExport } = backupStatus;
+  if (replica.state !== "ok" || driveExport.state !== "ok") return null;
+  const oldest = [replica.checkedAt, driveExport.checkedAt].sort()[0] ?? replica.checkedAt;
+  return (
+    <Link to="/settings#backups" className="backup-footer">
+      <CloudCheck size={16} aria-hidden="true" />
+      Backed up and verified {formatAgo(oldest)}
+    </Link>
+  );
+}
+
+export function SummaryPage() {
+  const now = new Date();
+  const primary = CATEGORIES[0];
+  return (
+    <Page
+      title="Summary"
+      subtitle={`${greeting(now)} · ${dateFormat.format(now)}`}
+      action={
+        primary !== undefined && (
+          <Link
+            to={primary.newEntryPath}
+            className="round-button bp"
+            aria-label={`New ${primary.name.toLowerCase()} reading`}
+            viewTransition
+          >
+            <Plus size={24} strokeWidth={2.4} aria-hidden="true" />
+          </Link>
+        )
+      }
+    >
+      <div className="summary-cards">
+        {CATEGORIES.map(({ id, SummaryCard }) => (
+          <SummaryCard key={id} />
+        ))}
+      </div>
+      <Section title="Highlights">
+        <div className="insights">
+          {CATEGORIES.map(({ id, Highlights }) => (
+            <Highlights key={id} />
+          ))}
+        </div>
+      </Section>
+      <BackupFooter />
+    </Page>
+  );
+}

@@ -106,10 +106,10 @@ export function averageSessions(
 
 export type Period = "morning" | "evening";
 
-/** Morning is 03:00–14:59 local time; anything else (including after midnight) is evening. */
+/** Morning is 03:00–11:59 local time; anything else (including after midnight) is evening. */
 export function periodOf(takenAt: Date): Period {
   const { hour } = toLocal(takenAt);
-  return hour >= 3 && hour < 15 ? "morning" : "evening";
+  return hour >= 3 && hour < 12 ? "morning" : "evening";
 }
 
 /**

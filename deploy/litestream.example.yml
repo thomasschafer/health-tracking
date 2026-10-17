@@ -1,0 +1,18 @@
+# Litestream config for replicating the health database to Cloudflare R2.
+# Copy to ~/.config/health-tracking/litestream.yml and fill in the account ID. Secrets come from
+# the environment (see docs/operations.md) so this file holds none.
+dbs:
+  - path: ${HEALTH_DATA_DIR}/health.db
+    replica:
+      type: s3
+      bucket: health-tracking-backups
+      path: health.db
+      endpoint: https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com
+      region: auto
+      access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+      secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+      # Objects are encrypted with this key on the way in (SSE-C), and Cloudflare doesn't keep
+      # it. Without the key the backups can't be read, so it must also be kept somewhere safe
+      # off the laptop, such as a password manager.
+      sse-customer-algorithm: AES256
+      sse-customer-key: ${LITESTREAM_SSE_CUSTOMER_KEY}

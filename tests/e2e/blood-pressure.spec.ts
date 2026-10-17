@@ -5,7 +5,7 @@ async function enterReadings(page: Page, readings: [number, number, number | nul
     await page.getByLabel(`Systolic for reading ${String(i + 1)}`).fill(String(systolic));
     await page.getByLabel(`Diastolic for reading ${String(i + 1)}`).fill(String(diastolic));
     if (pulse !== null) {
-      await page.getByLabel(`Pulse (optional) for reading ${String(i + 1)}`).fill(String(pulse));
+      await page.getByLabel(`Pulse for reading ${String(i + 1)}`).fill(String(pulse));
     }
   }
 }
@@ -36,7 +36,7 @@ test("moves to the next field once a value is complete", async ({ page }) => {
   await page.getByLabel("Systolic for reading 1").pressSequentially("128");
   await expect(page.getByLabel("Diastolic for reading 1")).toBeFocused();
   await page.keyboard.type("79");
-  await expect(page.getByLabel("Pulse (optional) for reading 1")).toBeFocused();
+  await expect(page.getByLabel("Pulse for reading 1")).toBeFocused();
   await page.keyboard.type("62");
   await expect(page.getByLabel("Systolic for reading 2")).toBeFocused();
 });

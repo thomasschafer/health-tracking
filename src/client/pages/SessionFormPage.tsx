@@ -243,9 +243,9 @@ function SessionForm({
                   const error = errors[field];
                   return (
                     <div className="field" key={field}>
-                      <label htmlFor={id}>
+                      {/* Column headings are only shown once; later rows keep them for screen readers. */}
+                      <label htmlFor={id} className={i === 0 ? undefined : "sr-only"}>
                         {FIELD_LABELS[field]}
-                        {field === "heartRate" && <span className="muted"> (optional)</span>}
                         <span className="sr-only"> for reading {i + 1}</span>
                       </label>
                       <input
@@ -261,6 +261,7 @@ function SessionForm({
                         pattern="[0-9]*"
                         autoComplete="off"
                         enterKeyHint="next"
+                        placeholder={field === "heartRate" ? "optional" : undefined}
                         value={row[field]}
                         aria-invalid={error !== undefined}
                         onChange={(e) => {

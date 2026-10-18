@@ -18,6 +18,9 @@ export const settingsSchema = z
   .strict();
 export type Settings = z.infer<typeof settingsSchema>;
 
+/** Settings as returned by the server, tolerating fields added by newer server versions. */
+export const settingsResponseSchema = settingsSchema.strip();
+
 export const DEFAULT_SETTINGS: Settings = {
   readingsPerSession: DEFAULT_READINGS_PER_SESSION,
   restTimerSeconds: 60,

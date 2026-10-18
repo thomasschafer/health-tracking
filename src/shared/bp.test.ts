@@ -3,6 +3,7 @@ import {
   averageReadings,
   averageSessions,
   bpSessionInputSchema,
+  bpSessionSchema,
   categorise,
   periodOf,
   readingSchema,
@@ -81,6 +82,18 @@ describe("bpSessionInputSchema", () => {
       bpSessionInputSchema.safeParse({ ...valid, readings: Array(6).fill(reading(120, 80)) })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("bpSessionSchema", () => {
+  it("drops fields it doesn't know, so older clients survive newer servers", () => {
+    const known = session("2026-10-17T20:05:00.000Z", [reading(120, 80)]);
+    const stored = {
+      ...known,
+      futureField: true,
+      readings: [{ ...reading(120, 80), futureReadingField: 1 }],
+    };
+    expect(bpSessionSchema.parse(stored)).toEqual(known);
   });
 });
 

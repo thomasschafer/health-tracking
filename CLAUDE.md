@@ -9,6 +9,9 @@ This app is maintained by agents, so keep it easy to change safely.
   unexpected rather than guessing.
 - The server runs TypeScript directly with Node's type stripping, so only erasable syntax is
   allowed (no enums, namespaces or parameter properties) and imports use `.ts` extensions.
+- The phone may run an older cached version of the client than the server. Keep API responses
+  backward compatible, and parse responses on the client with schemas that drop unknown keys
+  (inputs stay strict).
 - Schema changes go in `src/server/db/schema.ts`, followed by `npm run db:generate`. Never edit
   generated migrations. CI fails if the schema and migrations disagree.
 - Every change to user data must keep backups verifiable: new tables holding user data belong

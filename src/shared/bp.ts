@@ -53,16 +53,19 @@ export const bpSessionInputSchema = z
 export type BpSessionInput = z.input<typeof bpSessionInputSchema>;
 export type ValidBpSessionInput = z.output<typeof bpSessionInputSchema>;
 
-export const bpSessionSchema = z
-  .object({
-    id: sessionIdSchema,
-    takenAt: instantSchema,
-    note: z.string().nullable(),
-    readings: z.array(readingSchema).min(1).max(MAX_READINGS_PER_SESSION),
-    createdAt: instantSchema,
-    updatedAt: instantSchema,
-  })
-  .strict();
+/**
+ * A stored session as the server returns it. Unlike the input schemas, unknown keys are dropped
+ * rather than rejected: the phone can be running an older cached version of the app than the
+ * server, and must keep working when the server starts returning new fields.
+ */
+export const bpSessionSchema = z.object({
+  id: sessionIdSchema,
+  takenAt: instantSchema,
+  note: z.string().nullable(),
+  readings: z.array(readingSchema.strip()).min(1).max(MAX_READINGS_PER_SESSION),
+  createdAt: instantSchema,
+  updatedAt: instantSchema,
+});
 export type BpSession = z.infer<typeof bpSessionSchema>;
 
 export interface BpAverage {

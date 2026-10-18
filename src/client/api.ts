@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { backupStatusSchema, type BackupStatus } from "../shared/backup.ts";
 import { bpSessionSchema, type BpSession, type BpSessionInput } from "../shared/bp.ts";
-import { settingsSchema, type Settings } from "../shared/settings.ts";
+import { settingsResponseSchema, type Settings } from "../shared/settings.ts";
 
 const REQUEST_TIMEOUT_MS = 8_000;
 
@@ -74,12 +74,12 @@ export const api = {
   getSettings: (): Promise<Settings> =>
     request(
       "/settings",
-      z.object({ settings: settingsSchema }).transform((r) => r.settings),
+      z.object({ settings: settingsResponseSchema }).transform((r) => r.settings),
     ),
   saveSettings: (settings: Settings): Promise<Settings> =>
     request(
       "/settings",
-      z.object({ settings: settingsSchema }).transform((r) => r.settings),
+      z.object({ settings: settingsResponseSchema }).transform((r) => r.settings),
       {
         method: "PUT",
         body: JSON.stringify(settings),

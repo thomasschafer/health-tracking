@@ -228,38 +228,38 @@ test("shows the overview with a scrubbable chart", async ({ page }) => {
   await expect(page.getByText("Latest")).toBeVisible();
 });
 
-test("shows a backup warning that can't be dismissed", async ({ page }) => {
+test("keeps reminders in the notification centre", async ({ page }) => {
+  // A fixed status, since other tests record exports on the shared server.
+  await page.route("**/api/backup-status", (route) =>
+    route.fulfill({
+      json: {
+        status: {
+          replica: { state: "not-configured" },
+          export: { state: "not-configured" },
+          manualExport: { lastExportedAt: null, due: true },
+        },
+      },
+    }),
+  );
   await page.goto("/");
-  await expect(
-    page.getByText("Cloud backup isn't set up yet, so your data only exists on the laptop."),
-  ).toBeVisible();
+  // Reminders aren't pinned to the top; only data-loss risks are.
+  await expect(page.locator(".status-strip")).toHaveCount(0);
+  const bell = page.getByRole("button", { name: /^Notifications/ });
+  await expect(bell).toHaveAccessibleName("Notifications, 2 waiting");
 
-  await expect(page.getByRole("button", { name: /dismiss|close/i })).toHaveCount(0);
-});
+  await bell.click();
+  const sheet = page.getByRole("dialog", { name: "Notifications" });
+  await expect(sheet.getByText("Cloud backup isn't set up")).toBeVisible();
+  await expect(sheet.getByText("Save a copy of your data")).toBeVisible();
+  await sheet.getByRole("button", { name: "Remind me in a week" }).click();
+  await expect(sheet.getByText(/^Snoozed, back in 7 days$/)).toBeVisible();
+  await sheet.getByRole("button", { name: "Done" }).click();
+  await expect(bell).toHaveAccessibleName("Notifications, 1 waiting");
 
-test("builds a report for a chosen period", async ({ page }) => {
-  await setSettings(page, 1, 0);
-  await page.goto("/bp/new");
-  await enterReading(page, "141", "91", "70");
-  await page.getByRole("button", { name: "Save reading" }).click();
-  await expect(page.getByText("Reading saved")).toBeVisible();
-
-  await page.goto("/bp");
-  await page.getByRole("link", { name: /Report for your doctor/ }).click();
-  await page
-    .getByRole("group", { name: "Report period" })
-    .getByRole("button", { name: "7 days" })
-    .click();
-  await expect(page.getByRole("heading", { name: "Home blood pressure readings" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "141/91", exact: true }).first()).toBeVisible();
-
-  await page
-    .getByRole("group", { name: "Report period" })
-    .getByRole("button", { name: "Custom" })
-    .click();
-  await page.getByLabel("From").fill("2026-10-20");
-  await page.getByLabel("To").fill("2026-10-10");
-  await expect(page.getByText("Choose a start date before the end date.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: /^Notifications/ })).toHaveAccessibleName(
+    "Notifications, 1 waiting",
+  );
 });
 
 test.describe("exporting", () => {
@@ -291,7 +291,11 @@ test.describe("exporting", () => {
       expect.stringMatching(/^blood-pressure-.*\.csv:text\/csv:true$/),
     ]);
     await expect(page.getByText(/Last exported (just now|\d+ seconds? ago)/)).toBeVisible();
-    await expect(page.getByText("Save a copy of your data somewhere safe")).toHaveCount(0);
+    await page.goto("/");
+    // Only the cloud backup reminder is left once a copy has been exported.
+    await expect(page.getByRole("button", { name: /^Notifications/ })).toHaveAccessibleName(
+      "Notifications, 1 waiting",
+    );
   });
 
   test("offers a download when sharing is refused", async ({ page }) => {

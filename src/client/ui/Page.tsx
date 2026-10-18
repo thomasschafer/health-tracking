@@ -50,13 +50,11 @@ export function Page({ title, subtitle, back, action, children }: PageProps) {
       </div>
       <header className="page-header">
         {backLink}
+        {subtitle !== undefined && <p className="page-subtitle">{subtitle}</p>}
         <div className="page-title-row">
-          <div>
-            {subtitle !== undefined && <p className="page-subtitle">{subtitle}</p>}
-            <h1 className="page-title" ref={titleRef}>
-              {title}
-            </h1>
-          </div>
+          <h1 className="page-title" ref={titleRef}>
+            {title}
+          </h1>
           {action}
         </div>
       </header>

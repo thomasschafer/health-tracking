@@ -14,7 +14,12 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   useEffect(() => {
     const dialog = ref.current;
     if (dialog === null) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // Focus the sheet itself rather than its first button, which would show a focus ring
+      // before anything has been chosen.
+      dialog.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
@@ -23,6 +28,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
       ref={ref}
       className="sheet"
       aria-label={title}
+      tabIndex={-1}
       onClose={onClose}
       onClick={(e) => {
         // Clicks on the backdrop land on the dialog element itself.

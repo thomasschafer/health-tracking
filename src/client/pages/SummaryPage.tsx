@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useData } from "../data.tsx";
 import { formatAgo } from "../format.ts";
 import { CATEGORIES } from "../categories/registry.tsx";
+import { NotificationCentre } from "../shell/NotificationCentre.tsx";
 import { Page, Section } from "../ui/Page.tsx";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", {
@@ -48,16 +49,19 @@ export function SummaryPage() {
       title="Summary"
       subtitle={`${greeting(now)} · ${dateFormat.format(now)}`}
       action={
-        primary !== undefined && (
-          <Link
-            to={primary.newEntryPath}
-            className="round-button bp"
-            aria-label={`New ${primary.name.toLowerCase()} reading`}
-            viewTransition
-          >
-            <Plus size={24} strokeWidth={2.4} aria-hidden="true" />
-          </Link>
-        )
+        <div className="header-actions">
+          <NotificationCentre />
+          {primary !== undefined && (
+            <Link
+              to={primary.newEntryPath}
+              className="round-button bp"
+              aria-label={`New ${primary.name.toLowerCase()} reading`}
+              viewTransition
+            >
+              <Plus size={24} strokeWidth={2.4} aria-hidden="true" />
+            </Link>
+          )}
+        </div>
       }
     >
       <div className="summary-cards">

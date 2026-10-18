@@ -80,8 +80,18 @@ Sheet that was edited by hand.
 4. Optionally, the app can upload and verify that export to Google Drive automatically every
    day. This is built but not switched on; it needs Google OAuth credentials.
 
-If the cloud backup isn't set up, has failed, or hasn't been verified for 36 hours, the app shows
-a notice that can't be dismissed.
+## Notices
+
+- Problems that risk losing data are pinned to the top of every screen until fixed, and can't
+  be dismissed: readings only saved on the phone, readings the server rejected, and a cloud
+  backup that has failed or hasn't been verified for 36 hours.
+- Everything else waits in the notification centre, opened from the bell on Summary, which shows
+  a dot while anything is waiting: cloud backup not set up, an export being due, and an
+  available update. The export reminder can be snoozed for a week on that device.
+- When the laptop can't be reached, a slim line says so and shows how old the cached data is.
+- Updates install themselves at safe moments: just after the app opens, when moving between
+  screens, or when the app comes back to the front, but never while a reading is being
+  entered. A toast confirms the update.
 
 ## History
 

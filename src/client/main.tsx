@@ -11,6 +11,7 @@ import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { SummaryPage } from "./pages/SummaryPage.tsx";
 import { AppShell } from "./shell/AppShell.tsx";
 import { ExportProvider } from "./shell/ExportProvider.tsx";
+import { NoticesProvider } from "./shell/NoticesProvider.tsx";
 import { UpdateProvider } from "./shell/UpdateProvider.tsx";
 import { ToastProvider } from "./ui/Toast.tsx";
 import "./styles/tokens.css";
@@ -22,28 +23,30 @@ if (root === null) throw new Error("Missing #root element");
 
 createRoot(root).render(
   <StrictMode>
-    <UpdateProvider>
-      <BrowserRouter>
-        <ToastProvider>
+    <BrowserRouter>
+      <ToastProvider>
+        <UpdateProvider>
           <DataProvider>
             <ExportProvider>
-              <Routes>
-                <Route path="bp/new" element={<NewBpSessionPage />} />
-                <Route element={<AppShell />}>
-                  <Route index element={<SummaryPage />} />
-                  <Route path="browse" element={<BrowsePage />} />
-                  <Route path="bp" element={<BpOverviewPage />} />
-                  <Route path="bp/history" element={<BpHistoryPage />} />
-                  <Route path="bp/report" element={<BpReportPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="*" element={<p className="empty">Page not found.</p>} />
-                </Route>
-                <Route path="bp/:id" element={<EditBpSessionPage />} />
-              </Routes>
+              <NoticesProvider>
+                <Routes>
+                  <Route path="bp/new" element={<NewBpSessionPage />} />
+                  <Route element={<AppShell />}>
+                    <Route index element={<SummaryPage />} />
+                    <Route path="browse" element={<BrowsePage />} />
+                    <Route path="bp" element={<BpOverviewPage />} />
+                    <Route path="bp/history" element={<BpHistoryPage />} />
+                    <Route path="bp/report" element={<BpReportPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="*" element={<p className="empty">Page not found.</p>} />
+                  </Route>
+                  <Route path="bp/:id" element={<EditBpSessionPage />} />
+                </Routes>
+              </NoticesProvider>
             </ExportProvider>
           </DataProvider>
-        </ToastProvider>
-      </BrowserRouter>
-    </UpdateProvider>
+        </UpdateProvider>
+      </ToastProvider>
+    </BrowserRouter>
   </StrictMode>,
 );

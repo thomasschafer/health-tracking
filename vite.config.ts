@@ -30,8 +30,10 @@ export default defineConfig({
         description: "Personal health tracking",
         start_url: "/",
         display: "standalone",
-        background_color: "#f2f2f7",
-        theme_color: "#f2f2f7",
+        // Android uses these for the installed app's splash screen and system navigation bar.
+        // Manifests can't vary by colour scheme, so they match the dark theme.
+        background_color: "#000000",
+        theme_color: "#000000",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

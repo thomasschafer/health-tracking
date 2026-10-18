@@ -193,11 +193,7 @@ function ReadingDisplay({
       }}
     >
       <span className="reading-digits rounded-nums" data-testid={`field-${name}`}>
-        {row[name] === "" ? (
-          <span className="placeholder">{name === "heartRate" ? "–" : "–––"}</span>
-        ) : (
-          row[name]
-        )}
+        {row[name] === "" ? <span className="placeholder">–</span> : row[name]}
         {name === activeField && <span className="caret" aria-hidden="true" />}
       </span>
       <span className="reading-label">

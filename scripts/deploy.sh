@@ -6,6 +6,15 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 label="org.nix-community.home.health-tracking-server"
 
+plist="$HOME/Library/LaunchAgents/$label.plist"
+if [ -f "$plist" ]; then
+    # Build with the same Node as the service: native modules only load under the Node
+    # version they were built for.
+    PATH="$(plutil -extract EnvironmentVariables.PATH raw "$plist"):$PATH"
+    export PATH
+fi
+echo "Building with Node $(node --version)"
+
 cd "$root"
 npm ci --no-audit --no-fund
 npm run build

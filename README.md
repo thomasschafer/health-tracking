@@ -4,7 +4,8 @@ A personal health tracking PWA, starting with blood pressure. It runs on a lapto
 from a phone over Tailscale, and stores data in SQLite with verified off-site backups.
 
 - [Spec](docs/spec.md): what the app does and why.
-- [Operations](docs/operations.md): running it, setting up backups and recovering data.
+- [Operations](docs/operations.md): setting up a new machine, running it, setting up backups
+  and recovering data.
 
 ## Development
 

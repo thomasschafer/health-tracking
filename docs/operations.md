@@ -2,6 +2,27 @@
 
 How to run the app on the laptop, set up backups, and recover data.
 
+## Setting up a new machine
+
+Once the accounts exist, every secret a machine needs is in `~/.config/health-tracking/env`.
+Keep a copy of that file in your password manager (as a secure note) so a new machine only
+needs it pasted back.
+
+1. Install Node 26, Git and Tailscale, and sign in to Tailscale.
+2. Clone the repo, then run `npm ci && npm run build`.
+3. Recreate `~/.config/health-tracking/env` from your password manager, and copy
+   `deploy/litestream.example.yml` to `~/.config/health-tracking/litestream.yml` with your
+   Cloudflare account ID filled in. Make both readable only by you (`chmod 600`).
+4. Install Litestream (`scripts/install-litestream.sh` puts a verified copy in `.tools/bin`).
+5. Restore the database from R2 (see [Recovering data](#recovering-data)). Skip this on a
+   brand new setup.
+6. Start the app and Litestream (see [Running](#running)), then run `npm run backup:check`.
+7. Expose the app with Tailscale Serve and add it to your phone's home screen.
+
+For a brand new setup, first create the accounts as described in
+[Setting up Cloudflare R2](#setting-up-cloudflare-r2) and
+[Setting up the Google Drive export](#setting-up-the-google-drive-export).
+
 ## Data and configuration locations
 
 | What               | Where                                                                        |
@@ -52,7 +73,9 @@ automatically (launchd) is to be set up in the dotfiles repo.
 
 ## Setting up Cloudflare R2
 
-1. In the Cloudflare dashboard, enable R2 and create a bucket called `health-tracking-backups`.
+1. In the Cloudflare dashboard, enable R2. Then create the bucket, either in the dashboard or
+   with `npx wrangler login` followed by
+   `npx wrangler r2 bucket create health-tracking-backups --location weur`.
 2. Create an R2 API token with "Object Read & Write" on that bucket only. Note the access key
    ID, secret access key and your account ID.
 3. Generate an encryption key and save it in your password manager as well as the env file:

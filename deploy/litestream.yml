@@ -1,6 +1,6 @@
-# Litestream config for replicating the health database to Cloudflare R2.
-# Copy to ~/.config/health-tracking/litestream.yml and fill in the account ID. Secrets come from
-# the environment (see docs/operations.md) so this file holds none.
+# Litestream config for replicating the health database to Cloudflare R2. Everything
+# machine-specific or secret comes from the environment file (see docs/operations.md), so
+# LITESTREAM_CONFIG can point straight at this file.
 
 # Keep 30 days of history (the default is 24 hours), so data damaged by a bug can be restored
 # from before the damage. A daily snapshot of this small database costs next to nothing.
@@ -14,7 +14,8 @@ dbs:
       type: s3
       bucket: health-tracking-backups
       path: health.db
-      endpoint: https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com
+      # https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com
+      endpoint: ${LITESTREAM_ENDPOINT}
       region: auto
       access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
       secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}

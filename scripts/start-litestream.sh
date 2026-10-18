@@ -13,7 +13,9 @@ set -a
 source "$env_file"
 set +a
 
+: "${HEALTH_DATA_DIR:?HEALTH_DATA_DIR must be set in $env_file}"
 : "${LITESTREAM_CONFIG:?LITESTREAM_CONFIG must be set in $env_file}"
+: "${LITESTREAM_ENDPOINT:?LITESTREAM_ENDPOINT must be set in $env_file}"
 : "${LITESTREAM_ACCESS_KEY_ID:?LITESTREAM_ACCESS_KEY_ID must be set in $env_file}"
 : "${LITESTREAM_SECRET_ACCESS_KEY:?LITESTREAM_SECRET_ACCESS_KEY must be set in $env_file}"
 : "${LITESTREAM_SSE_CUSTOMER_KEY:?LITESTREAM_SSE_CUSTOMER_KEY must be set in $env_file}"

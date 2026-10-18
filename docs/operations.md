@@ -4,24 +4,21 @@ How to run the app on the laptop, set up backups, and recover data.
 
 ## Setting up a new machine
 
-Once the accounts exist, every secret a machine needs is in `~/.config/health-tracking/env`.
-Keep a copy of that file in your password manager (as a secure note) so a new machine only
-needs it pasted back.
+On a Mac set up with [dotfiles](https://github.com/thomasschafer/dotfiles), `./setup.sh personal`
+does everything: it clones this repo, builds it, installs the background services (below) and
+runs `scripts/setup-machine.sh`. Without dotfiles, clone and build the repo yourself, then run
+that script.
 
-1. Install Node 26, Git and Tailscale, and sign in to Tailscale.
-2. Clone the repo, then run `npm ci && npm run build`.
-3. Recreate `~/.config/health-tracking/env` from your password manager, and copy
-   `deploy/litestream.example.yml` to `~/.config/health-tracking/litestream.yml` with your
-   Cloudflare account ID filled in. Make both readable only by you (`chmod 600`).
-4. Install Litestream (`scripts/install-litestream.sh` puts a verified copy in `.tools/bin`).
-5. Restore the database from R2 (see [Recovering data](#recovering-data)). Skip this on a
-   brand new setup.
-6. Start the app and Litestream (see [Running](#running)), then run `npm run backup:check`.
-7. Expose the app with Tailscale Serve and add it to your phone's home screen.
+`scripts/setup-machine.sh` asks for the settings file (`~/.config/health-tracking/env`): paste
+a saved copy, or enter the R2 details. It restores the database from R2, then saves the
+settings, and finally offers to serve the app over Tailscale. It is safe to re-run.
 
-For a brand new setup, first create the accounts as described in
-[Setting up Cloudflare R2](#setting-up-cloudflare-r2) and
-[Setting up the automatic Google Drive export](#setting-up-the-automatic-google-drive-export-optional) if you want it.
+Keep a copy of the settings file in your password manager (as a secure note): every secret is
+in it, so a new machine only needs it pasted in. The one secret that can't be recreated is
+`LITESTREAM_SSE_CUSTOMER_KEY`; without it, the R2 backups can't be read.
+
+For a brand new setup, create the R2 bucket and token first (see
+[Setting up Cloudflare R2](#setting-up-cloudflare-r2)).
 
 ## Data and configuration locations
 
@@ -30,7 +27,8 @@ For a brand new setup, first create the accounts as described in
 | Database           | `~/.local/share/health-tracking/health.db` (override with `HEALTH_DATA_DIR`) |
 | Pre-import backups | `~/.local/share/health-tracking/backups/`                                    |
 | Environment file   | `~/.config/health-tracking/env` (suggested)                                  |
-| Litestream config  | `~/.config/health-tracking/litestream.yml` (suggested)                       |
+| Litestream config  | `deploy/litestream.yml` in this repo (no secrets)                            |
+| Service logs       | `~/.local/state/health-tracking/`                                            |
 
 Nothing in these locations may ever be committed. The repo is public.
 
@@ -42,6 +40,7 @@ Nothing in these locations may ever be committed. The repo is public.
 | `HEALTH_HOST`, `HEALTH_PORT`                                                         | Listen address. Defaults to `127.0.0.1:8787`; keep it on localhost.     |
 | `HEALTH_ALLOWED_TAILSCALE_LOGIN`                                                     | Optional. Only API requests from this Tailscale login are allowed.      |
 | `LITESTREAM_CONFIG`                                                                  | Path to the Litestream config. Enables replica checks.                  |
+| `LITESTREAM_ENDPOINT`                                                                | R2 endpoint, `https://<account ID>.r2.cloudflarestorage.com`.           |
 | `LITESTREAM_BIN`                                                                     | Litestream binary. Defaults to `litestream` on the `PATH`.              |
 | `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY`                           | R2 API token, read by Litestream.                                       |
 | `LITESTREAM_SSE_CUSTOMER_KEY`                                                        | Encryption key for the R2 objects. Keep a copy off the laptop.          |
@@ -50,26 +49,27 @@ Nothing in these locations may ever be committed. The repo is public.
 
 ## Running
 
-```sh
-npm ci
-npm run build
-scripts/start-server.sh       # the app
-scripts/start-litestream.sh   # replication to R2, once it is set up
-```
+Two launchd agents, defined in dotfiles, keep things running:
 
-Both scripts read `~/.config/health-tracking/env` (override with `HEALTH_ENV_FILE`), so they can
-be run as they are by launchd.
+| Service                                     | Label                                               | Log                                             |
+| ------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| The app (`scripts/start-server.sh`)         | `org.nix-community.home.health-tracking-server`     | `~/.local/state/health-tracking/server.log`     |
+| Replication (`scripts/start-litestream.sh`) | `org.nix-community.home.health-tracking-litestream` | `~/.local/state/health-tracking/litestream.log` |
 
-Expose it to the tailnet over HTTPS (needed for the PWA):
+They start at login, restart if they crash, and only run once the settings file exists. Like
+everything else, they pause while the Mac sleeps and catch up when it wakes.
+
+To ship changes, run `scripts/deploy.sh`: it rebuilds the app and restarts the server.
+Phones pick up the new version the next time the app is opened ("A new version is ready").
+
+The app listens on `127.0.0.1:8787` only. Tailscale Serve exposes it over HTTPS (needed for the
+PWA), which `scripts/setup-machine.sh` sets up:
 
 ```sh
 tailscale serve --bg --https=8443 http://127.0.0.1:8787
 ```
 
-Then open `https://<machine>.<tailnet>.ts.net:8443` on the phone and use "Add to Home Screen".
-
-The server and Litestream both need to run whenever the laptop is awake. Starting them
-automatically (launchd) is to be set up in the dotfiles repo.
+Open `https://<machine>.<tailnet>.ts.net:8443` on the phone and add it to the home screen.
 
 ## Setting up Cloudflare R2
 
@@ -80,12 +80,12 @@ automatically (launchd) is to be set up in the dotfiles repo.
    ID, secret access key and your account ID.
 3. Generate an encryption key and save it in your password manager as well as the env file:
    `openssl rand -base64 32`.
-4. Copy `deploy/litestream.example.yml` to `~/.config/health-tracking/litestream.yml` and fill
-   in the account ID.
-5. Add `LITESTREAM_CONFIG`, `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY` and
-   `LITESTREAM_SSE_CUSTOMER_KEY` to the env file.
-6. Run `litestream replicate -config ~/.config/health-tracking/litestream.yml` with that
-   environment, then `npm run backup:check` to confirm a restore works end to end.
+4. Run `scripts/setup-machine.sh` and choose to enter the R2 details, or add them to the
+   settings file yourself (see the variables above; `LITESTREAM_CONFIG` points at
+   `deploy/litestream.yml` in this repo).
+5. Once replication is running, run
+   `node --env-file="$HOME/.config/health-tracking/env" scripts/backup-check.ts` to confirm a
+   restore works end to end.
 
 ## Setting up the automatic Google Drive export (optional)
 
@@ -107,7 +107,8 @@ This is off by default; "Export all data" in Settings covers saving copies to Dr
 From R2, if the laptop is lost or the database is damaged:
 
 ```sh
-litestream restore -config ~/.config/health-tracking/litestream.yml \
+set -a; source ~/.config/health-tracking/env; set +a
+litestream restore -config "$LITESTREAM_CONFIG" \
   -o ~/.local/share/health-tracking/health.db \
   ~/.local/share/health-tracking/health.db
 ```

@@ -1,4 +1,4 @@
-import { ChevronRight, Info, Moon, Plus, Sun } from "lucide-react";
+import { ChevronRight, FileText, Info, Moon, Plus, Sun } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { summariseWindow, type PeriodSummary } from "../../../shared/bp.ts";
@@ -12,6 +12,7 @@ import {
   formatShortDayKey,
 } from "../../format.ts";
 import { Card } from "../../ui/Card.tsx";
+import { List, ListRow } from "../../ui/List.tsx";
 import { Page, Section } from "../../ui/Page.tsx";
 import { Segmented } from "../../ui/Segmented.tsx";
 import { Sheet } from "../../ui/Sheet.tsx";
@@ -212,6 +213,21 @@ export function BpOverviewPage() {
             ))
           )}
         </Card>
+      </Section>
+
+      <Section title="Share">
+        <List>
+          <ListRow
+            icon={
+              <span className="list-icon tinted">
+                <FileText size={16} aria-hidden="true" />
+              </span>
+            }
+            title="Report for your doctor"
+            detail="Averages and every reading for a period, to print or save as PDF"
+            to="/bp/report"
+          />
+        </List>
       </Section>
 
       <Sheet

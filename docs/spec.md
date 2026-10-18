@@ -33,6 +33,9 @@ Sheet that was edited by hand.
   allows corrections, a note and changing the time before saving. Unsaved entries are kept as
   drafts for 12 hours.
 
+- A report screen summarises any period (averages overall, morning and evening, plus every
+  reading) in a layout that prints cleanly or saves as a PDF for a GP.
+
 ## Blood pressure
 
 - A session is a time, one to five readings and an optional note. Each reading is systolic,

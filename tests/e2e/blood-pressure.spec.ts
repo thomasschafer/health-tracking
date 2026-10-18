@@ -235,3 +235,28 @@ test("shows a backup warning that can't be dismissed", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /dismiss|close/i })).toHaveCount(0);
 });
+
+test("builds a report for a chosen period", async ({ page }) => {
+  await setSettings(page, 1, 0);
+  await page.goto("/bp/new");
+  await enterReading(page, "141", "91", "70");
+  await page.getByRole("button", { name: "Save reading" }).click();
+  await expect(page.getByText("Reading saved")).toBeVisible();
+
+  await page.goto("/bp");
+  await page.getByRole("link", { name: /Report for your doctor/ }).click();
+  await page
+    .getByRole("group", { name: "Report period" })
+    .getByRole("button", { name: "7 days" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Home blood pressure readings" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "141/91", exact: true }).first()).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Report period" })
+    .getByRole("button", { name: "Custom" })
+    .click();
+  await page.getByLabel("From").fill("2026-10-20");
+  await page.getByLabel("To").fill("2026-10-10");
+  await expect(page.getByText("Choose a start date before the end date.")).toBeVisible();
+});

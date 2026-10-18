@@ -32,16 +32,20 @@ Nothing in these locations may ever be committed. The repo is public.
 ```sh
 npm ci
 npm run build
-node --env-file-if-exists="$HOME/.config/health-tracking/env" src/server/main.ts
+scripts/start-server.sh       # the app
+scripts/start-litestream.sh   # replication to R2, once it is set up
 ```
+
+Both scripts read `~/.config/health-tracking/env` (override with `HEALTH_ENV_FILE`), so they can
+be run as they are by launchd.
 
 Expose it to the tailnet over HTTPS (needed for the PWA):
 
 ```sh
-tailscale serve --bg 8787
+tailscale serve --bg --https=8443 http://127.0.0.1:8787
 ```
 
-Then open `https://<machine>.<tailnet>.ts.net` on the phone and use "Add to Home Screen".
+Then open `https://<machine>.<tailnet>.ts.net:8443` on the phone and use "Add to Home Screen".
 
 The server and Litestream both need to run whenever the laptop is awake. Starting them
 automatically (launchd) is to be set up in the dotfiles repo.

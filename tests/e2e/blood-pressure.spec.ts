@@ -118,6 +118,11 @@ test("edits, deletes and restores a session", async ({ page }) => {
   await page.goto("/bp/history");
   await page.getByRole("link", { name: new RegExp(note) }).click();
   await expect(page.getByText("Edit reading")).toBeVisible();
+  await page.getByRole("button", { name: "After exercise" }).click();
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByText("Discard your changes?")).toBeVisible();
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await page.getByRole("button", { name: "After exercise" }).click();
   await page.getByRole("button", { name: /^Reading 1/ }).click();
   await page.getByRole("button", { name: /^Systolic/ }).click();
   await press(page, "150");

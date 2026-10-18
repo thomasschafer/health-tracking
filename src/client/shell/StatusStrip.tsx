@@ -1,10 +1,10 @@
 import { CloudOff, RefreshCw, TriangleAlert, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { useRegisterSW } from "virtual:pwa-register/react";
 import { BACKUP_KIND_LABELS, BACKUP_KINDS, type BackupKindStatus } from "../../shared/backup.ts";
 import { useData } from "../data.tsx";
 import { formatAgo } from "../format.ts";
+import { useUpdate } from "./UpdateProvider.tsx";
 
 type Tone = "critical" | "warning" | "info";
 
@@ -44,10 +44,7 @@ function backupProblem(status: BackupKindStatus): { tone: Tone; text: string } |
  */
 export function StatusStrip() {
   const { pending, connection, cachedAt, backupStatus, loadError } = useData();
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW();
+  const { updateAvailable, applyUpdate } = useUpdate();
   const rejected = pending.filter((p) => p.rejection !== null).length;
   const waiting = pending.length - rejected;
 
@@ -107,15 +104,11 @@ export function StatusStrip() {
       }
     }
   }
-  if (needRefresh) {
+  if (updateAvailable) {
     notices.push(
       <Notice key="update" tone="info" icon={<RefreshCw size={16} />}>
         A new version is ready.{" "}
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => void updateServiceWorker(true)}
-        >
+        <button type="button" className="link-button" onClick={applyUpdate}>
           Update now
         </button>
       </Notice>,

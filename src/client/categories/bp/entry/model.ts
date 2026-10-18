@@ -98,6 +98,14 @@ function rowAt(state: EntryState, index: number): RowDraft {
 
 const reading = (index: number, field: FieldName): Step => ({ kind: "reading", index, field });
 
+/**
+ * Moves to a field. A field that already has a value is replaced by the next digit, so correcting
+ * a reading never appends to (and silently overflows) the old value.
+ */
+function moveTo(state: EntryState, index: number, field: FieldName): EntryState {
+  return { ...state, step: reading(index, field), replace: rowAt(state, index)[field] !== "" };
+}
+
 /** Validates the current reading and moves to the rest timer, the next reading or the review. */
 function finishReading(state: EntryState, index: number, config: EntryConfig): EntryState {
   const parsed = parseRow(rowAt(state, index));
@@ -143,7 +151,7 @@ export function entryReducer(
       const next = nextField(step.field);
       return next === null
         ? finishReading(updated, step.index, config)
-        : { ...updated, step: reading(step.index, next) };
+        : moveTo(updated, step.index, next);
     }
     case "backspace": {
       if (step.kind !== "reading") return state;
@@ -163,7 +171,7 @@ export function entryReducer(
       const next = nextField(step.field);
       return next === null
         ? finishReading(state, step.index, config)
-        : { ...state, step: reading(step.index, next), replace: false };
+        : moveTo(state, step.index, next);
     }
     case "focus":
       return step.kind === "reading"

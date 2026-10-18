@@ -7,29 +7,45 @@ interface ToastMessage {
 
 const ToastContext = createContext<((toast: ToastMessage) => void) | null>(null);
 
-const TOAST_MS = 6000;
+const TOAST_MS = 4000;
+/** Toasts with an action (like Undo) stay longer, and don't time out while focused. */
+const ACTION_TOAST_MS = 10_000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<(ToastMessage & { key: number }) | null>(null);
+  const [paused, setPaused] = useState(false);
   const show = useCallback((next: ToastMessage) => {
     setToast({ ...next, key: Date.now() });
   }, []);
 
   useEffect(() => {
-    if (toast === null) return;
-    const timer = setTimeout(() => {
-      setToast(null);
-    }, TOAST_MS);
+    if (toast === null || paused) return;
+    const timer = setTimeout(
+      () => {
+        setToast(null);
+      },
+      toast.action === undefined ? TOAST_MS : ACTION_TOAST_MS,
+    );
     return () => {
       clearTimeout(timer);
     };
-  }, [toast]);
+  }, [toast, paused]);
 
   return (
     <ToastContext.Provider value={show}>
       {children}
       {toast !== null && (
-        <div className="toast" role="status" key={toast.key}>
+        <div
+          className="toast"
+          role="status"
+          key={toast.key}
+          onFocus={() => {
+            setPaused(true);
+          }}
+          onBlur={() => {
+            setPaused(false);
+          }}
+        >
           <span>{toast.text}</span>
           {toast.action !== undefined && (
             <button

@@ -3,6 +3,8 @@ import { backupStatusSchema, type BackupStatus } from "../shared/backup.ts";
 import { bpSessionSchema, type BpSession, type BpSessionInput } from "../shared/bp.ts";
 import { settingsSchema, type Settings } from "../shared/settings.ts";
 
+const REQUEST_TIMEOUT_MS = 8_000;
+
 /** The server answered, but with an error. */
 export class ApiError extends Error {
   override name = "ApiError";
@@ -28,7 +30,12 @@ async function request<T>(path: string, schema: z.ZodType<T>, init: RequestInit 
   try {
     const headers = new Headers(init.headers);
     headers.set("Content-Type", "application/json");
-    res = await fetch(`/api${path}`, { ...init, headers });
+    // Without a timeout, requests to a sleeping laptop can hang for a long time before failing.
+    res = await fetch(`/api${path}`, {
+      ...init,
+      headers,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
   } catch (err) {
     throw new UnreachableError("Can't reach the server", { cause: err });
   }

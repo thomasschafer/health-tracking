@@ -10,7 +10,7 @@ import { SessionRow } from "./SessionRow.tsx";
 const MONTHS_PER_PAGE = 3;
 
 export function BpHistoryPage() {
-  const { sessions } = useData();
+  const { sessions, connection } = useData();
   const [monthsShown, setMonthsShown] = useState(MONTHS_PER_PAGE);
   const today = localDateKey(new Date());
 
@@ -25,14 +25,16 @@ export function BpHistoryPage() {
       title="All readings"
       back={{ to: "/bp", label: "Blood pressure" }}
       action={
-        <a
-          href="/api/bp/export.csv"
-          className="round-button plain"
-          aria-label="Download all readings as CSV"
-          download
-        >
-          <Download size={20} aria-hidden="true" />
-        </a>
+        connection === "online" && (
+          <a
+            href="/api/bp/export.csv"
+            className="round-button plain"
+            aria-label="Download all readings as CSV"
+            download
+          >
+            <Download size={20} aria-hidden="true" />
+          </a>
+        )
       }
     >
       {newestFirst.length === 0 && <p className="empty">No readings yet.</p>}

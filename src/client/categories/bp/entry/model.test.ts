@@ -69,6 +69,14 @@ describe("entryReducer", () => {
     expect(s.step).toMatchObject({ field: "diastolic" });
   });
 
+  it("lets a reading be corrected straight through from the review", () => {
+    let s = run(start(1), ["128", "79", "62"]);
+    expect(s.step).toEqual({ kind: "review" });
+    s = run(s, [{ type: "edit-reading", index: 0 }, "131", "84", "70"]);
+    expect(s.step).toEqual({ kind: "review" });
+    expect(s.rows[0]).toEqual({ systolic: "131", diastolic: "84", heartRate: "70" });
+  });
+
   it("replaces the offending value after a validation error", () => {
     const s = run(start(), ["85", "95", { type: "next" }, "75"]);
     expect(s.rows[0]).toMatchObject({ systolic: "85", diastolic: "75" });

@@ -204,8 +204,12 @@ export function SettingsPage() {
           <ListRow
             icon={icon(Download, "var(--text-3)")}
             title="Export blood pressure"
-            detail="CSV of every reading, for a spreadsheet or your GP"
-            href="/api/bp/export.csv"
+            detail={
+              offline
+                ? "Available when the laptop is reachable"
+                : "CSV of every reading, for a spreadsheet or your GP"
+            }
+            {...(offline ? {} : { href: "/api/bp/export.csv" })}
           />
           <ListRow
             icon={icon(HardDrive, "var(--text-3)")}

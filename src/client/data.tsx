@@ -38,6 +38,8 @@ interface DataContextValue {
   sessions: DisplaySession[];
   pending: PendingSession[];
   settings: Settings;
+  /** False until settings have come from the server or the offline cache. */
+  settingsReady: boolean;
   backupStatus: BackupStatus | null;
   loadError: string | null;
   refresh: () => Promise<void>;
@@ -53,6 +55,7 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null);
 
 const REFRESH_INTERVAL_MS = 60_000;
+const SETTINGS_GRACE_MS = 1_500;
 
 const isRetryable = (err: unknown): boolean =>
   err instanceof UnreachableError || (err instanceof ApiError && err.status >= 500);
@@ -70,7 +73,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [settingsReady, setSettingsReady] = useState(false);
+  const settingsFromServer = useRef(false);
   const refreshing = useRef<Promise<void> | null>(null);
+
+  /** Shows cached data. Returns whether there was any. */
+  const applySnapshot = useCallback(async (): Promise<boolean> => {
+    const snapshot = await loadSnapshot();
+    if (snapshot === null) return false;
+    setServerSessions((current) => (current.length === 0 ? snapshot.sessions : current));
+    setSettings((current) => (settingsFromServer.current ? current : snapshot.settings));
+    setCachedAt(snapshot.savedAt);
+    return true;
+  }, []);
 
   /** Sends queued sessions in order, stopping at the first one the server can't take yet. */
   const flushPending = useCallback(async (): Promise<void> => {
@@ -98,7 +113,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ]);
       setServerSessions(sessions);
       setSettings(nextSettings);
+      settingsFromServer.current = true;
       setBackupStatus(status);
+      setSettingsReady(true);
       setConnection("online");
       setCachedAt(null);
       setLoadError(null);
@@ -106,21 +123,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setPending(await listPending());
       if (err instanceof UnreachableError) {
+        // Cached settings are applied before the connection state changes, so screens waiting
+        // on it never render with default settings.
+        await applySnapshot();
+        setSettingsReady(true);
         setConnection("offline");
-        const snapshot = await loadSnapshot();
-        if (snapshot !== null) {
-          setServerSessions((current) => (current.length === 0 ? snapshot.sessions : current));
-          setSettings(snapshot.settings);
-          setCachedAt(snapshot.savedAt);
-        }
         return;
       }
       // The server is reachable but returned an error, which the banner reports.
+      setSettingsReady(true);
       setConnection("online");
       setLoadError(err instanceof Error ? err.message : String(err));
       throw err;
     }
-  }, [flushPending]);
+  }, [flushPending, applySnapshot]);
 
   const refresh = useCallback((): Promise<void> => {
     refreshing.current ??= doRefresh().finally(() => {
@@ -129,8 +145,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return refreshing.current;
   }, [doRefresh]);
 
+  /**
+   * Refreshes after a write that has already succeeded. A failure here is reported by the
+   * banner rather than the write, so a saved reading is never shown as unsaved.
+   */
+  const refreshAfterWrite = useCallback(async (): Promise<void> => {
+    await refresh().catch((err: unknown) => {
+      console.error("Refresh after a successful write failed", err);
+    });
+  }, [refresh]);
+
   useEffect(() => {
     void requestPersistentStorage();
+    // Show cached data straight away rather than waiting for the network, which can take a
+    // while to give up when the laptop is asleep. State is only set after the cache is read,
+    // so this doesn't cascade renders as the rule assumes.
+    // Cached settings may be stale (e.g. changed just before a reload), so the server gets a
+    // moment to answer before screens that depend on them fall back to the cache.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    const cached = applySnapshot();
+    const grace = setTimeout(() => {
+      void cached.then((found) => {
+        if (found) setSettingsReady(true);
+      });
+    }, SETTINGS_GRACE_MS);
     const run = () => {
       refresh().catch((err: unknown) => {
         console.error(err);
@@ -144,11 +182,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     window.addEventListener("online", run);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
+      clearTimeout(grace);
       clearInterval(interval);
       window.removeEventListener("online", run);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [refresh]);
+  }, [refresh, applySnapshot]);
 
   const addSession = useCallback(
     async (input: BpSessionInput): Promise<AddResult> => {
@@ -158,6 +197,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       try {
         await api.createSession(input);
         await removePending(input.id);
+        setPending(await listPending());
       } catch (err) {
         if (isRetryable(err)) {
           setConnection("offline");
@@ -168,42 +208,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setPending(await listPending());
         throw err;
       }
-      await refresh();
+      await refreshAfterWrite();
       return "saved";
     },
-    [refresh],
+    [refreshAfterWrite],
   );
 
   const updateSession = useCallback(
     async (input: BpSessionInput) => {
-      await api.updateSession(input);
-      await refresh();
+      const updated = await api.updateSession(input);
+      setServerSessions((current) => current.map((s) => (s.id === updated.id ? updated : s)));
+      await refreshAfterWrite();
     },
-    [refresh],
+    [refreshAfterWrite],
   );
 
   const deleteSession = useCallback(
     async (id: string) => {
       await api.deleteSession(id);
-      await refresh();
+      setServerSessions((current) => current.filter((s) => s.id !== id));
+      void refreshAfterWrite();
     },
-    [refresh],
+    [refreshAfterWrite],
   );
 
   const restoreSession = useCallback(
     async (id: string) => {
       await api.restoreSession(id);
-      await refresh();
+      await refreshAfterWrite();
     },
-    [refresh],
+    [refreshAfterWrite],
   );
 
   const saveSettings = useCallback(
     async (next: Settings) => {
       setSettings(await api.saveSettings(next));
-      await refresh();
+      settingsFromServer.current = true;
+      await refreshAfterWrite();
     },
-    [refresh],
+    [refreshAfterWrite],
   );
 
   const retryPending = useCallback(
@@ -235,6 +278,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     sessions,
     pending,
     settings,
+    settingsReady,
     backupStatus,
     loadError,
     refresh,

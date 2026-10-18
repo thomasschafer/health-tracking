@@ -1,7 +1,7 @@
 import { ChevronRight, Info, Moon, Plus, Sun } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { sessionDayKey, summariseWindow, type PeriodSummary } from "../../../shared/bp.ts";
+import { summariseWindow, type PeriodSummary } from "../../../shared/bp.ts";
 import { localDateKey } from "../../../shared/time.ts";
 import { useData } from "../../data.tsx";
 import {
@@ -207,7 +207,7 @@ export function BpOverviewPage() {
               <SessionRow
                 key={s.id}
                 session={s}
-                dateLabel={formatRelativeDayKey(sessionDayKey(new Date(s.takenAt)), today)}
+                dateLabel={formatRelativeDayKey(localDateKey(new Date(s.takenAt)), today)}
               />
             ))
           )}

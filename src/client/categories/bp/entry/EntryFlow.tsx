@@ -54,12 +54,26 @@ interface Initial {
 }
 
 export function NewBpSessionPage() {
-  const { settings, connection } = useData();
+  const { settings, settingsReady } = useData();
+  const navigate = useNavigate();
   const [restored, setRestored] = useState(() => loadDraft(new Date()));
   const [attempt, setAttempt] = useState(0);
   // Without a draft, wait for the stored settings so the number of readings is right.
-  if (restored === null && connection === "loading") {
-    return <div className="entry" aria-busy="true" />;
+  if (restored === null && !settingsReady) {
+    return (
+      <div className="entry" aria-busy="true">
+        <header className="entry-header">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close"
+            onClick={() => void navigate(-1)}
+          >
+            <X size={24} aria-hidden="true" />
+          </button>
+        </header>
+      </div>
+    );
   }
   return (
     <NewEntry
@@ -250,7 +264,8 @@ function EntryFlow({
   const [note, setNote] = useState(initial.note);
   const [timeOpen, setTimeOpen] = useState(false);
   const [timeValue, setTimeValue] = useState("");
-  const [timeOpenedAt, setTimeOpenedAt] = useState(0);
+  const [timeOpenedWith, setTimeOpenedWith] = useState({ value: "", at: 0 });
+  const timeEdited = useRef(false);
   const [confirm, setConfirm] = useState<"discard" | "delete" | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -259,6 +274,28 @@ function EntryFlow({
   const savedRef = useRef(false);
 
   const hasData = state.rows.some((r) => !isRowEmpty(r)) || note.trim() !== "";
+  const dirty =
+    JSON.stringify({ rows: state.rows, note, takenAt }) !==
+    JSON.stringify({ rows: initial.rows, note: initial.note, takenAt: initial.takenAt });
+
+  // The app may be left open on this screen and resumed hours later. Until something has been
+  // entered, keep the time current so the reading isn't filed at the wrong time of day.
+  const hasDataRef = useRef(hasData);
+  useEffect(() => {
+    hasDataRef.current = hasData;
+  }, [hasData]);
+  useEffect(() => {
+    if (mode !== "new") return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && !hasDataRef.current && !timeEdited.current) {
+        setTakenAt(new Date().toISOString());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== "new" || savedRef.current) return;
@@ -281,9 +318,14 @@ function EntryFlow({
     if (step.kind !== "reading") return;
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      // Leave text fields and anything inside an open sheet alone.
+      if (target?.closest("input, textarea, select, dialog[open]") != null) return;
       if (/^\d$/.test(event.key)) dispatch({ type: "digit", digit: event.key });
       else if (event.key === "Backspace") dispatch({ type: "backspace" });
-      else if (event.key === "Enter" || event.key === "Tab") dispatch({ type: "next" });
+      // Enter on a focused button should activate that button instead.
+      else if (event.key === "Enter" && target?.closest("button, a") == null)
+        dispatch({ type: "next" });
       else return;
       event.preventDefault();
     };
@@ -300,7 +342,7 @@ function EntryFlow({
   }, [location.key, navigate]);
 
   const close = () => {
-    if (mode === "new" && hasData) {
+    if (mode === "new" ? hasData : dirty) {
       setConfirm("discard");
     } else {
       clearDraft();
@@ -327,9 +369,24 @@ function EntryFlow({
     setSaveError(null);
     try {
       if (mode === "new") {
-        const result = await addSession(input);
+        // The session is persisted to the offline queue before it is sent, so the draft can go
+        // now. Keeping it would offer the same reading again if the app closed mid-save.
         savedRef.current = true;
         clearDraft();
+        let result: Awaited<ReturnType<typeof addSession>>;
+        try {
+          result = await addSession(input);
+        } catch (err) {
+          savedRef.current = false;
+          saveDraft({
+            id: initial.id,
+            takenAt,
+            rows: state.rows,
+            note,
+            savedAt: new Date().toISOString(),
+          });
+          throw err;
+        }
         toast({
           text: result === "saved" ? "Reading saved" : "Saved on this device. It will sync later.",
         });
@@ -362,8 +419,9 @@ function EntryFlow({
   };
 
   const openTime = () => {
-    setTimeValue(formatLocalDateTimeInput(toLocal(new Date(takenAt))));
-    setTimeOpenedAt(Date.now());
+    const value = formatLocalDateTimeInput(toLocal(new Date(takenAt)));
+    setTimeValue(value);
+    setTimeOpenedWith({ value, at: Date.now() });
     setTimeOpen(true);
   };
   let timeError: string | null = null;
@@ -371,7 +429,7 @@ function EntryFlow({
   if (timeOpen) {
     try {
       const instant = fromLocal(parseLocalDateTimeInput(timeValue));
-      if (instant.getTime() > timeOpenedAt + 5 * 60_000)
+      if (instant.getTime() > timeOpenedWith.at + 5 * 60_000)
         timeError = "The time can't be in the future";
       else parsedTime = instant.toISOString();
     } catch (err) {
@@ -693,7 +751,7 @@ function EntryFlow({
           className="time-input"
           aria-label="Time taken"
           value={timeValue}
-          max={formatLocalDateTimeInput(toLocal(new Date(timeOpenedAt)))}
+          max={formatLocalDateTimeInput(toLocal(new Date(timeOpenedWith.at)))}
           onChange={(e) => {
             setTimeValue(e.target.value);
           }}
@@ -705,7 +763,12 @@ function EntryFlow({
             className="button block primary"
             disabled={parsedTime === null}
             onClick={() => {
-              if (parsedTime !== null) setTakenAt(parsedTime);
+              // Re-parsing an untouched value would drop seconds, and could pick the other
+              // instant of an hour repeated by the autumn clock change.
+              if (parsedTime !== null && timeValue !== timeOpenedWith.value) {
+                setTakenAt(parsedTime);
+                timeEdited.current = true;
+              }
               setTimeOpen(false);
             }}
           >
@@ -725,8 +788,12 @@ function EntryFlow({
 
       <ConfirmSheet
         open={confirm === "discard"}
-        title="Discard this reading?"
-        message="The values you've entered will be lost."
+        title={mode === "new" ? "Discard this reading?" : "Discard your changes?"}
+        message={
+          mode === "new"
+            ? "The values you've entered will be lost."
+            : "The reading will stay as it was."
+        }
         confirmLabel="Discard"
         cancelLabel="Keep editing"
         destructive

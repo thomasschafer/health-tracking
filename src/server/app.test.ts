@@ -29,6 +29,7 @@ beforeEach(() => {
     backupStatus: () => ({
       replica: { state: "not-configured" },
       export: { state: "not-configured" },
+      manualExport: { lastExportedAt: null, due: true },
     }),
     allowedTailscaleLogin: null,
     clientDir: null,
@@ -107,6 +108,20 @@ describe("blood pressure API", () => {
   });
 });
 
+describe("export API", () => {
+  it("exports all data as restorable JSON and records manual exports", async () => {
+    await app.request("/api/bp/sessions", json("POST", body));
+    const res = await app.request("/api/export.json");
+    expect(res.headers.get("Content-Disposition")).toBe(
+      'attachment; filename="health-export-2026-10-17.json"',
+    );
+    const exported = (await res.json()) as { format: string; tables: { bp_sessions: unknown[] } };
+    expect(exported.format).toBe("health-tracking-export");
+    expect(exported.tables.bp_sessions).toHaveLength(1);
+    expect((await app.request("/api/manual-exports", { method: "POST" })).status).toBe(201);
+  });
+});
+
 describe("settings API", () => {
   it("returns defaults and saves changes", async () => {
     expect(await (await app.request("/api/settings")).json()).toEqual({
@@ -136,6 +151,7 @@ describe("Tailscale login check", () => {
       backupStatus: () => ({
         replica: { state: "not-configured" },
         export: { state: "not-configured" },
+        manualExport: { lastExportedAt: null, due: true },
       }),
       allowedTailscaleLogin: "me@example.com",
       clientDir: null,

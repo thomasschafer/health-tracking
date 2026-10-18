@@ -68,3 +68,9 @@ export const backupCanary = sqliteTable("backup_canary", {
   nonce: text("nonce").notNull(),
   writtenAt: text("written_at").notNull(),
 });
+
+/** Each time a full copy of the data was exported from the app by hand. */
+export const manualExports = sqliteTable("manual_exports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  exportedAt: text("exported_at").notNull(),
+});

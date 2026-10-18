@@ -21,7 +21,7 @@ needs it pasted back.
 
 For a brand new setup, first create the accounts as described in
 [Setting up Cloudflare R2](#setting-up-cloudflare-r2) and
-[Setting up the Google Drive export](#setting-up-the-google-drive-export).
+[Setting up the automatic Google Drive export](#setting-up-the-automatic-google-drive-export-optional) if you want it.
 
 ## Data and configuration locations
 
@@ -87,7 +87,9 @@ automatically (launchd) is to be set up in the dotfiles repo.
 6. Run `litestream replicate -config ~/.config/health-tracking/litestream.yml` with that
    environment, then `npm run backup:check` to confirm a restore works end to end.
 
-## Setting up the Google Drive export
+## Setting up the automatic Google Drive export (optional)
+
+This is off by default; "Export all data" in Settings covers saving copies to Drive by hand.
 
 1. In the Google Cloud console, create a project, enable the Google Drive API, and configure
    the OAuth consent screen as "External" with yourself as the only user.

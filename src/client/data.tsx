@@ -49,6 +49,8 @@ interface DataContextValue {
   restoreSession: (id: string) => Promise<void>;
   saveSettings: (settings: Settings) => Promise<void>;
   retryPending: (id: string) => Promise<void>;
+  /** Records that the user saved a full export, which resets the export reminder. */
+  recordManualExport: () => Promise<void>;
   discardPending: (id: string) => Promise<void>;
 }
 
@@ -259,6 +261,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
+  const recordManualExport = useCallback(async () => {
+    setBackupStatus(await api.recordManualExport());
+  }, []);
+
   const discardPending = useCallback(async (id: string) => {
     await removePending(id);
     setPending(await listPending());
@@ -289,6 +295,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     saveSettings,
     retryPending,
     discardPending,
+    recordManualExport,
   };
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

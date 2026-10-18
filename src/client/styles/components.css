@@ -1813,3 +1813,8 @@
     break-inside: avoid;
   }
 }
+
+.export-files {
+  box-shadow: none;
+  background: var(--fill);
+}

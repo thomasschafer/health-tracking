@@ -1,6 +1,13 @@
 # Litestream config for replicating the health database to Cloudflare R2.
 # Copy to ~/.config/health-tracking/litestream.yml and fill in the account ID. Secrets come from
 # the environment (see docs/operations.md) so this file holds none.
+
+# Keep 30 days of history (the default is 24 hours), so data damaged by a bug can be restored
+# from before the damage. A daily snapshot of this small database costs next to nothing.
+snapshot:
+  interval: 24h
+  retention: 720h
+
 dbs:
   - path: ${HEALTH_DATA_DIR}/health.db
     replica:

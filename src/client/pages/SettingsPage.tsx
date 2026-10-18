@@ -9,11 +9,17 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { useState } from "react";
-import { BACKUP_KIND_LABELS, BACKUP_KINDS, type BackupKindStatus } from "../../shared/backup.ts";
+import {
+  BACKUP_KIND_LABELS,
+  BACKUP_KINDS,
+  MANUAL_EXPORT_DUE_AFTER_DAYS,
+  type BackupKindStatus,
+} from "../../shared/backup.ts";
 import { averageReadings, MAX_READINGS_PER_SESSION } from "../../shared/bp.ts";
 import { REST_TIMER_OPTIONS } from "../../shared/settings.ts";
 import { formatDate, formatTime } from "../../shared/time.ts";
 import { useData } from "../data.tsx";
+import { useExport } from "../shell/ExportProvider.tsx";
 import { formatAgo, formatBp } from "../format.ts";
 import { List, ListRow } from "../ui/List.tsx";
 import { Page, Section } from "../ui/Page.tsx";
@@ -56,9 +62,11 @@ export function SettingsPage() {
     connection,
     sessions,
   } = useData();
+  const openExport = useExport();
   const [error, setError] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
   const offline = connection !== "online";
+  const lastExportedAt = backupStatus?.manualExport.lastExportedAt ?? null;
 
   const run = (action: () => Promise<void>) => {
     setError(null);
@@ -175,7 +183,7 @@ export function SettingsPage() {
 
       <Section
         title="Data"
-        footer="Backups are checked every day by restoring them and comparing against your data."
+        footer={`The cloud backup is checked every day by restoring it and comparing it with your data. You'll be reminded to export a copy every ${String(MANUAL_EXPORT_DUE_AFTER_DAYS)} days.`}
       >
         <List>
           <span id="backups" />
@@ -186,7 +194,10 @@ export function SettingsPage() {
               detail="Status unavailable while the laptop is unreachable"
             />
           ) : (
-            BACKUP_KINDS.map((kind) => {
+            BACKUP_KINDS.filter(
+              // The automatic Drive export is optional, so it is only listed once set up.
+              (kind) => kind === "replica" || backupStatus[kind].state !== "not-configured",
+            ).map((kind) => {
               const { text, ok } = describeBackup(backupStatus[kind]);
               return (
                 <ListRow
@@ -202,14 +213,16 @@ export function SettingsPage() {
             })
           )}
           <ListRow
-            icon={icon(Download, "var(--text-3)")}
-            title="Export blood pressure"
+            icon={icon(Download, "var(--bp)")}
+            title="Export all data"
             detail={
               offline
                 ? "Available when the laptop is reachable"
-                : "CSV of every reading, for a spreadsheet or your GP"
+                : lastExportedAt === null
+                  ? "Save a copy to Google Drive or Files. Never exported yet."
+                  : `Save a copy to Google Drive or Files. Last exported ${formatAgo(lastExportedAt)}.`
             }
-            {...(offline ? {} : { href: "/api/bp/export.csv" })}
+            {...(offline ? {} : { onClick: openExport, chevron: true })}
           />
           <ListRow
             icon={icon(HardDrive, "var(--text-3)")}

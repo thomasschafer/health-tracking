@@ -231,8 +231,9 @@ test("shows the overview with a scrubbable chart", async ({ page }) => {
 test("shows a backup warning that can't be dismissed", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByText("Backups aren't set up yet, so your data only exists on the laptop."),
+    page.getByText("Cloud backup isn't set up yet, so your data only exists on the laptop."),
   ).toBeVisible();
+
   await expect(page.getByRole("button", { name: /dismiss|close/i })).toHaveCount(0);
 });
 
@@ -259,4 +260,48 @@ test("builds a report for a chosen period", async ({ page }) => {
   await page.getByLabel("From").fill("2026-10-20");
   await page.getByLabel("To").fill("2026-10-10");
   await expect(page.getByText("Choose a start date before the end date.")).toBeVisible();
+});
+
+test.describe("exporting", () => {
+  test("shares a full export and records it", async ({ page }) => {
+    // Stands in for the phone's share sheet, recording what was shared.
+    await page.addInitScript(() => {
+      const shared: string[] = [];
+      Object.assign(globalThis, { sharedFiles: shared });
+      Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
+      Object.defineProperty(navigator, "share", {
+        value: (data: { files: File[] }) => {
+          shared.push(...data.files.map((f) => `${f.name}:${f.type}:${String(f.size > 0)}`));
+          return Promise.resolve();
+        },
+        configurable: true,
+      });
+    });
+    await page.goto("/settings");
+    await page.getByRole("button", { name: /Export all data/ }).click();
+    const sheet = page.getByRole("dialog", { name: "Export all data" });
+    await expect(sheet.getByText(/^health-export-\d{4}-\d{2}-\d{2}\.json$/)).toBeVisible();
+    await sheet.getByRole("button", { name: "Share…" }).click();
+    await expect(page.getByText("Export saved")).toBeVisible();
+    const shared = await page.evaluate(
+      () => (globalThis as unknown as { sharedFiles: string[] }).sharedFiles,
+    );
+    expect(shared).toEqual([
+      expect.stringMatching(/^health-export-.*\.json:application\/json:true$/),
+      expect.stringMatching(/^blood-pressure-.*\.csv:text\/csv:true$/),
+    ]);
+    await expect(page.getByText(/Last exported (just now|\d+ seconds? ago)/)).toBeVisible();
+    await expect(page.getByText("Save a copy of your data somewhere safe")).toHaveCount(0);
+  });
+
+  test("downloads the files where sharing isn't available", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "canShare", { value: undefined, configurable: true });
+    });
+    await page.goto("/settings");
+    await page.getByRole("button", { name: /Export all data/ }).click();
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download files" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^health-export-.*\.json$/);
+  });
 });

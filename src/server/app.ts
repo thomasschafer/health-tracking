@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { z, ZodError } from "zod";
 import { bpSessionInputSchema, sessionDayKey } from "../shared/bp.ts";
 import { settingsSchema } from "../shared/settings.ts";
+import { localDateKey } from "../shared/time.ts";
 import type { BackupStatus } from "../shared/backup.ts";
 import {
   createSession,
@@ -17,6 +18,8 @@ import {
 } from "./bp-repo.ts";
 import type { Db } from "./db/index.ts";
 import { ConflictError, NotFoundError } from "./errors.ts";
+import { recordManualExport } from "./backup-status.ts";
+import { exportJson } from "./backup/json-export.ts";
 import { sessionsToCsv } from "./export.ts";
 import { getSettings, saveSettings } from "./settings-repo.ts";
 
@@ -113,6 +116,22 @@ export function createApp(deps: AppDeps): Hono {
       `attachment; filename="blood-pressure-${fromKey ?? "start"}-to-${toKey ?? "now"}.csv"`,
     );
     return c.body(sessionsToCsv(sessions));
+  });
+
+  // A lossless copy of all data, which scripts/restore-from-export.ts can rebuild a database from.
+  api.get("/export.json", (c) => {
+    const exportedAt = now();
+    c.header(
+      "Content-Disposition",
+      `attachment; filename="health-export-${localDateKey(exportedAt)}.json"`,
+    );
+    return c.json(exportJson(db, exportedAt));
+  });
+
+  // Called by the app once the user has saved an export somewhere, to track when to remind them.
+  api.post("/manual-exports", (c) => {
+    recordManualExport(db, now());
+    return c.json({ status: deps.backupStatus() }, 201);
   });
 
   api.get("/settings", (c) => c.json({ settings: getSettings(db) }));

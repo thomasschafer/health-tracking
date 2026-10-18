@@ -1,9 +1,10 @@
-import { CloudOff, RefreshCw, TriangleAlert, WifiOff } from "lucide-react";
+import { CloudOff, Download, RefreshCw, TriangleAlert, WifiOff } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { BACKUP_KIND_LABELS, BACKUP_KINDS, type BackupKindStatus } from "../../shared/backup.ts";
+import { BACKUP_KIND_LABELS, type BackupKindStatus } from "../../shared/backup.ts";
 import { useData } from "../data.tsx";
 import { formatAgo } from "../format.ts";
+import { useExport } from "./ExportProvider.tsx";
 import { useUpdate } from "./UpdateProvider.tsx";
 
 type Tone = "critical" | "warning" | "info";
@@ -45,6 +46,7 @@ function backupProblem(status: BackupKindStatus): { tone: Tone; text: string } |
 export function StatusStrip() {
   const { pending, connection, cachedAt, backupStatus, loadError } = useData();
   const { updateAvailable, applyUpdate } = useUpdate();
+  const openExport = useExport();
   const rejected = pending.filter((p) => p.rejection !== null).length;
   const waiting = pending.length - rejected;
 
@@ -81,20 +83,21 @@ export function StatusStrip() {
     );
   }
   if (backupStatus !== null) {
-    const unconfigured = BACKUP_KINDS.filter(
-      (kind) => backupStatus[kind].state === "not-configured",
-    );
-    if (unconfigured.length === BACKUP_KINDS.length) {
+    const { replica, export: driveExport, manualExport } = backupStatus;
+    if (replica.state === "not-configured") {
       notices.push(
-        <Notice key="backups" tone="warning" icon={<TriangleAlert size={16} />}>
-          Backups aren't set up yet, so your data only exists on the laptop.{" "}
+        <Notice key="replica-setup" tone="warning" icon={<TriangleAlert size={16} />}>
+          Cloud backup isn't set up yet, so your data only exists on the laptop.{" "}
           <Link to="/settings#backups">Details</Link>
         </Notice>,
       );
     }
-    for (const kind of BACKUP_KINDS) {
-      if (unconfigured.length === BACKUP_KINDS.length) break;
-      const problem = backupProblem(backupStatus[kind]);
+    // The automatic Drive export is optional, so it only raises problems once it is set up.
+    for (const [kind, status] of [
+      ["replica", replica],
+      ["export", driveExport],
+    ] as const) {
+      const problem = status.state === "not-configured" ? null : backupProblem(status);
       if (problem !== null) {
         notices.push(
           <Notice key={kind} tone={problem.tone} icon={<TriangleAlert size={16} />}>
@@ -102,6 +105,18 @@ export function StatusStrip() {
           </Notice>,
         );
       }
+    }
+    if (manualExport.due) {
+      notices.push(
+        <Notice key="manual-export" tone="info" icon={<Download size={16} />}>
+          {manualExport.lastExportedAt === null
+            ? "Save a copy of your data somewhere safe, such as Google Drive."
+            : `Your last export was ${formatAgo(manualExport.lastExportedAt)}. Time to save a fresh copy.`}{" "}
+          <button type="button" className="link-button" onClick={openExport}>
+            Export now
+          </button>
+        </Notice>,
+      );
     }
   }
   if (updateAvailable) {

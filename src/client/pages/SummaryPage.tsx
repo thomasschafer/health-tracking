@@ -25,16 +25,17 @@ function greeting(now: Date): string {
   return "Good evening";
 }
 
+/** Reassurance that everything is backed up, shown only when nothing needs attention. */
 function BackupFooter() {
   const { backupStatus } = useData();
   if (backupStatus === null) return null;
-  const { replica, export: driveExport } = backupStatus;
-  if (replica.state !== "ok" || driveExport.state !== "ok") return null;
-  const oldest = [replica.checkedAt, driveExport.checkedAt].sort()[0] ?? replica.checkedAt;
+  const { replica, export: driveExport, manualExport } = backupStatus;
+  if (replica.state !== "ok" || manualExport.due) return null;
+  if (driveExport.state !== "ok" && driveExport.state !== "not-configured") return null;
   return (
     <Link to="/settings#backups" className="backup-footer">
       <CloudCheck size={16} aria-hidden="true" />
-      Backed up and verified {formatAgo(oldest)}
+      Backed up and verified {formatAgo(replica.checkedAt)}
     </Link>
   );
 }

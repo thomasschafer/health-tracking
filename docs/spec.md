@@ -69,18 +69,19 @@ Sheet that was edited by hand.
 
 ## Backups
 
-Three layers, each verified automatically:
-
 1. Litestream streams every change to Cloudflare R2, encrypted with a key Cloudflare doesn't
-   store.
-2. Every day the app uploads a full JSON export and a CSV of all readings to a folder in Google
-   Drive. These are readable without the app.
-3. Every day the app restores the R2 replica into a temporary file, runs an integrity check
-   and confirms it matches the live data. It also re-downloads each Drive upload to confirm
-   it is byte-for-byte correct, and rebuilds a database from the JSON to prove it is complete.
+   store, and keeps 30 days of history so the database can be restored to a point before any
+   damage.
+2. Every day the app restores the R2 replica into a temporary file, runs an integrity check and
+   confirms it matches the live data.
+3. "Export all data" saves a full JSON export (which can rebuild the database) and a CSV through
+   the phone's share sheet, for example to Google Drive. The app reminds you to export if it
+   has been more than 30 days.
+4. Optionally, the app can upload and verify that export to Google Drive automatically every
+   day. This is built but not switched on; it needs Google OAuth credentials.
 
-If a backup isn't set up, has failed, or hasn't been verified for 36 hours, the app shows a
-banner that can't be dismissed.
+If the cloud backup isn't set up, has failed, or hasn't been verified for 36 hours, the app shows
+a notice that can't be dismissed.
 
 ## History
 

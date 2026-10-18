@@ -14,13 +14,25 @@ export const backupKindStatusSchema = z.discriminatedUnion("state", [
 ]);
 export type BackupKindStatus = z.infer<typeof backupKindStatusSchema>;
 
+/** Manual exports older than this prompt a reminder to export again. */
+export const MANUAL_EXPORT_DUE_AFTER_DAYS = 30;
+
+export const manualExportStatusSchema = z.object({
+  lastExportedAt: z.string().nullable(),
+  due: z.boolean(),
+});
+export type ManualExportStatus = z.infer<typeof manualExportStatusSchema>;
+
 export const backupStatusSchema = z.object({
   replica: backupKindStatusSchema,
+  /** The automatic Google Drive export, which is optional. */
   export: backupKindStatusSchema,
+  /** Copies saved by hand from the app, e.g. to Google Drive via the share sheet. */
+  manualExport: manualExportStatusSchema,
 });
 export type BackupStatus = z.infer<typeof backupStatusSchema>;
 
 export const BACKUP_KIND_LABELS: Record<BackupKind, string> = {
   replica: "Cloud backup (Cloudflare R2)",
-  export: "Daily export (Google Drive)",
+  export: "Automatic export (Google Drive)",
 };

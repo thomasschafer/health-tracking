@@ -25,7 +25,8 @@ const errorBodySchema = z.object({
   issues: z.array(z.object({ message: z.string() })).optional(),
 });
 
-async function request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
+/** Sends a request and returns the response, turning failures into ApiError or UnreachableError. */
+async function send(path: string, init: RequestInit = {}): Promise<Response> {
   let res: Response;
   try {
     const headers = new Headers(init.headers);
@@ -46,10 +47,17 @@ async function request<T>(path: string, schema: z.ZodType<T>, init: RequestInit 
       : `Request failed with status ${String(res.status)}`;
     throw new ApiError(res.status, message);
   }
-  if (res.status === 204) {
-    return schema.parse(undefined);
-  }
-  return schema.parse(await res.json());
+  return res;
+}
+
+async function request<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
+  const res = await send(path, init);
+  return schema.parse(res.status === 204 ? undefined : await res.json());
+}
+
+/** Fetches a file's contents verbatim, for exports that are saved rather than parsed. */
+async function requestText(path: string): Promise<string> {
+  return (await send(path)).text();
 }
 
 const sessionResponse = z.object({ session: bpSessionSchema }).transform((r) => r.session);
@@ -83,6 +91,16 @@ export const api = {
       {
         method: "PUT",
         body: JSON.stringify(settings),
+      },
+    ),
+  exportJson: (): Promise<string> => requestText("/export.json"),
+  exportCsv: (): Promise<string> => requestText("/bp/export.csv"),
+  recordManualExport: (): Promise<BackupStatus> =>
+    request(
+      "/manual-exports",
+      z.object({ status: backupStatusSchema }).transform((r) => r.status),
+      {
+        method: "POST",
       },
     ),
   backupStatus: (): Promise<BackupStatus> =>

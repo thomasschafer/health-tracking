@@ -20,8 +20,8 @@
   gap: 8px;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
   background: var(--chrome);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: var(--chrome-blur);
+  backdrop-filter: var(--chrome-blur);
   border-top: 0.5px solid var(--separator);
 }
 
@@ -1426,8 +1426,8 @@
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--bg) 70%, transparent);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   animation: fade-in 150ms var(--ease);
 }
 
@@ -1574,8 +1574,8 @@
   color: var(--bg);
   font-size: 15px;
   font-weight: 500;
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   animation: toast-in 260ms var(--ease);
 }
 
@@ -1606,8 +1606,8 @@
   height: calc(44px + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) 8px 0;
   background: var(--chrome);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: var(--chrome-blur);
+  backdrop-filter: var(--chrome-blur);
   border-bottom: 0.5px solid var(--separator);
   opacity: 0;
   pointer-events: none;

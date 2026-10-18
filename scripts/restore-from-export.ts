@@ -6,7 +6,7 @@ import { openDatabase } from "../src/server/db/index.ts";
 const [exportPath, databasePath] = process.argv.slice(2);
 if (exportPath === undefined || databasePath === undefined) {
   console.error(
-    "Usage: node scripts/restore-from-export.ts <health-export.json> <new-database-path>",
+    "Usage: node scripts/restore-from-export.ts <health-export.json(.txt)> <new-database-path>",
   );
   process.exit(2);
 }

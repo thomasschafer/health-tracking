@@ -114,11 +114,11 @@ litestream restore -config ~/.config/health-tracking/litestream.yml \
 
 Add `-timestamp 2026-10-17T20:00:00Z` to restore to a point in time.
 
-From a Drive export, if R2 is unavailable: download the latest `health-export-*.json` and
+From a Drive export, if R2 is unavailable: download the latest `health-export-*.json.txt` (or `.json` from the automatic export) and
 rebuild a database from it, then move it into place while the server is stopped:
 
 ```sh
-node scripts/restore-from-export.ts health-export-2026-10-17.json /tmp/health.db
+node scripts/restore-from-export.ts health-export-2026-10-17.json.txt /tmp/health.db
 mv /tmp/health.db ~/.local/share/health-tracking/health.db
 ```
 

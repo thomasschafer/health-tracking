@@ -7,7 +7,10 @@ import { Sheet } from "../ui/Sheet.tsx";
 import { useToast } from "../ui/Toast.tsx";
 
 type Prepared =
-  { state: "preparing" } | { state: "ready"; files: File[] } | { state: "error"; message: string };
+  | { state: "preparing" }
+  | { state: "ready"; files: File[] }
+  /** `files` is set when preparing worked but sharing failed, so they can still be downloaded. */
+  | { state: "error"; message: string; files: File[] | null };
 
 const ExportContext = createContext<(() => void) | null>(null);
 
@@ -51,12 +54,18 @@ export function ExportProvider({ children }: { children: ReactNode }) {
       setPrepared({
         state: "ready",
         files: [
-          new File([json], `health-export-${day}.json`, { type: "application/json" }),
+          // Chrome on Android refuses to share .json files, but allows plain text. The content
+          // is still JSON, which the restore script reads regardless of the extension.
+          new File([json], `health-export-${day}.json.txt`, { type: "text/plain" }),
           new File([csv], `blood-pressure-${day}.csv`, { type: "text/csv" }),
         ],
       });
     } catch (err) {
-      setPrepared({ state: "error", message: err instanceof Error ? err.message : String(err) });
+      setPrepared({
+        state: "error",
+        message: err instanceof Error ? err.message : String(err),
+        files: null,
+      });
     }
   }, []);
 
@@ -77,13 +86,22 @@ export function ExportProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const downloadAll = (files: File[]) => {
+    files.forEach(download);
+    void finish();
+  };
+
   const share = async (files: File[]) => {
     try {
       await navigator.share({ files, title: "Health data export" });
     } catch (err) {
       // Closing the share sheet without choosing anywhere isn't an error worth reporting.
       if (err instanceof DOMException && err.name === "AbortError") return;
-      setPrepared({ state: "error", message: err instanceof Error ? err.message : String(err) });
+      setPrepared({
+        state: "error",
+        message: err instanceof Error ? err.message : String(err),
+        files,
+      });
       return;
     }
     await finish();
@@ -112,7 +130,7 @@ export function ExportProvider({ children }: { children: ReactNode }) {
             {prepared.files.map((file) => (
               <div key={file.name} className="list-row">
                 <span className="list-icon tinted">
-                  {file.name.endsWith(".json") ? (
+                  {file.name.endsWith(".json.txt") ? (
                     <FileJson size={16} aria-hidden="true" />
                   ) : (
                     <FileSpreadsheet size={16} aria-hidden="true" />
@@ -141,18 +159,28 @@ export function ExportProvider({ children }: { children: ReactNode }) {
                 type="button"
                 className="button block bp large"
                 onClick={() => {
-                  prepared.files.forEach(download);
-                  void finish();
+                  downloadAll(prepared.files);
                 }}
               >
                 Download files
               </button>
             ))}
-          {prepared.state === "error" && (
-            <button type="button" className="button block primary" onClick={() => void prepare()}>
-              Try again
-            </button>
-          )}
+          {prepared.state === "error" &&
+            (prepared.files === null ? (
+              <button type="button" className="button block primary" onClick={() => void prepare()}>
+                Try again
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="button block primary"
+                onClick={() => {
+                  downloadAll(prepared.files ?? []);
+                }}
+              >
+                Download files instead
+              </button>
+            ))}
           <button
             type="button"
             className="button block plain"

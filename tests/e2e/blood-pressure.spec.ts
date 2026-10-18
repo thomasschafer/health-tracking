@@ -280,18 +280,36 @@ test.describe("exporting", () => {
     await page.goto("/settings");
     await page.getByRole("button", { name: /Export all data/ }).click();
     const sheet = page.getByRole("dialog", { name: "Export all data" });
-    await expect(sheet.getByText(/^health-export-\d{4}-\d{2}-\d{2}\.json$/)).toBeVisible();
+    await expect(sheet.getByText(/^health-export-\d{4}-\d{2}-\d{2}\.json\.txt$/)).toBeVisible();
     await sheet.getByRole("button", { name: "Share…" }).click();
     await expect(page.getByText("Export saved")).toBeVisible();
     const shared = await page.evaluate(
       () => (globalThis as unknown as { sharedFiles: string[] }).sharedFiles,
     );
     expect(shared).toEqual([
-      expect.stringMatching(/^health-export-.*\.json:application\/json:true$/),
+      expect.stringMatching(/^health-export-.*\.json\.txt:text\/plain:true$/),
       expect.stringMatching(/^blood-pressure-.*\.csv:text\/csv:true$/),
     ]);
     await expect(page.getByText(/Last exported (just now|\d+ seconds? ago)/)).toBeVisible();
     await expect(page.getByText("Save a copy of your data somewhere safe")).toHaveCount(0);
+  });
+
+  test("offers a download when sharing is refused", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "canShare", { value: () => true, configurable: true });
+      Object.defineProperty(navigator, "share", {
+        value: () => Promise.reject(new DOMException("Permission denied", "NotAllowedError")),
+        configurable: true,
+      });
+    });
+    await page.goto("/settings");
+    await page.getByRole("button", { name: /Export all data/ }).click();
+    await page.getByRole("button", { name: "Share…" }).click();
+    await expect(page.getByText("Couldn't export: Permission denied")).toBeVisible();
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download files instead" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^health-export-.*\.json\.txt$/);
+    await expect(page.getByText("Export saved")).toBeVisible();
   });
 
   test("downloads the files where sharing isn't available", async ({ page }) => {
@@ -302,6 +320,6 @@ test.describe("exporting", () => {
     await page.getByRole("button", { name: /Export all data/ }).click();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download files" }).click();
-    expect((await download).suggestedFilename()).toMatch(/^health-export-.*\.json$/);
+    expect((await download).suggestedFilename()).toMatch(/^health-export-.*\.json\.txt$/);
   });
 });

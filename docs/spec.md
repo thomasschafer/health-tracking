@@ -20,6 +20,19 @@ Sheet that was edited by hand.
 - Single user, no login. Being on the tailnet is the access control, optionally tightened by
   checking the Tailscale login header (`HEALTH_ALLOWED_TAILSCALE_LOGIN`).
 
+## Screens
+
+- Summary shows a card per health category (latest value, trend sparkline, status) and the most
+  noteworthy insights. Blood pressure is the first category; others plug into the same
+  structure.
+- The blood pressure overview has a chart of daily, weekly or monthly averages drawn as bars
+  from diastolic to systolic, which can be scrubbed to inspect values. It also has morning and
+  evening averages, insights, and recent sessions.
+- Entering a session is a full-screen flow with an in-app keypad. Fields advance automatically
+  once a value is complete, an optional rest timer runs between readings, and a review step
+  allows corrections, a note and changing the time before saving. Unsaved entries are kept as
+  drafts for 12 hours.
+
 ## Blood pressure
 
 - A session is a time, one to five readings and an optional note. Each reading is systolic,
@@ -29,6 +42,11 @@ Sheet that was edited by hand.
 - Readings outside plausible ranges, or with diastolic at or above systolic, are rejected.
   Unusual but plausible values get a warning.
 - Sessions can be edited and deleted. Deleting is a soft delete with an undo.
+- A rest timer between readings (default 60 seconds, configurable or off) follows the advice
+  to leave a minute or so between readings.
+- Insights compare recent averages with the period before (30 days, or 90 when data is
+  sparse), compare mornings with evenings, and encourage enough readings for a reliable
+  average.
 - Morning is 03:00 to 11:59 London time; everything else is evening. Readings taken after
   midnight count towards the previous day's evening.
 - Averages weight each session equally. Categories use NICE home-monitoring thresholds

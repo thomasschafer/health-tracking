@@ -463,6 +463,10 @@ function EntryFlow({
           <div className="entry-feedback" aria-live="polite">
             {state.error !== null ? (
               <span className="entry-error">{state.error}</span>
+            ) : step.index === 0 && isRowEmpty(activeRow) && mode === "new" ? (
+              <span className="entry-tip">
+                Sit upright with your back supported and your arm resting at heart height.
+              </span>
             ) : (
               (() => {
                 const parsed = parseRow(activeRow);

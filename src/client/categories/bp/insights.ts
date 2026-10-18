@@ -29,43 +29,47 @@ function sessionsBetween(sessions: readonly BpSession[], from: string, to: strin
   });
 }
 
+/** Compares the latest window with the one before, trying longer windows when data is sparse. */
 function trendInsight(sessions: readonly BpSession[], today: string): Insight | null {
-  const recent = sessionsBetween(sessions, addDaysToDateKey(today, -29), today);
-  const previous = sessionsBetween(
-    sessions,
-    addDaysToDateKey(today, -59),
-    addDaysToDateKey(today, -30),
-  );
-  if (recent.length < MIN_SESSIONS || previous.length < MIN_SESSIONS) return null;
-  const now = averageSessions(recent);
-  const before = averageSessions(previous);
-  if (now === null || before === null) return null;
-  const dSys = round(now.systolic - before.systolic);
-  const dDia = round(now.diastolic - before.diastolic);
-  if (Math.abs(dSys) < 3 && Math.abs(dDia) < 3) {
+  for (const days of [30, 90]) {
+    const recent = sessionsBetween(sessions, addDaysToDateKey(today, -(days - 1)), today);
+    const previous = sessionsBetween(
+      sessions,
+      addDaysToDateKey(today, -(2 * days - 1)),
+      addDaysToDateKey(today, -days),
+    );
+    if (recent.length < MIN_SESSIONS || previous.length < MIN_SESSIONS) continue;
+    const now = averageSessions(recent);
+    const before = averageSessions(previous);
+    if (now === null || before === null) continue;
+    const dSys = round(now.systolic - before.systolic);
+    const dDia = round(now.diastolic - before.diastolic);
+    if (Math.abs(dSys) < 3 && Math.abs(dDia) < 3) {
+      return {
+        kind: "trend",
+        tone: "neutral",
+        title: "Holding steady",
+        body: `Your ${String(days)}-day average is within a few points of the ${String(days)} days before (${String(round(before.systolic))}/${String(round(before.diastolic))}).`,
+      };
+    }
+    const signed = (n: number) => (n > 0 ? `+${String(n)}` : String(n));
+    const falling = dSys + dDia < 0;
+    const category = categorise(now);
+    const tone: InsightTone = falling
+      ? category === "low"
+        ? "attention"
+        : "positive"
+      : category === "normal"
+        ? "neutral"
+        : "attention";
     return {
       kind: "trend",
-      tone: "neutral",
-      title: "Holding steady",
-      body: `Your 30-day average is within a few points of the month before (${String(round(before.systolic))}/${String(round(before.diastolic))}).`,
+      tone,
+      title: falling ? "Trending down" : "Trending up",
+      body: `Over the last ${String(days)} days you've averaged ${signed(dSys)}/${signed(dDia)} mmHg compared with the ${String(days)} days before.`,
     };
   }
-  const signed = (n: number) => (n > 0 ? `+${String(n)}` : String(n));
-  const falling = dSys + dDia < 0;
-  const category = categorise(now);
-  const tone: InsightTone = falling
-    ? category === "low"
-      ? "attention"
-      : "positive"
-    : category === "normal"
-      ? "neutral"
-      : "attention";
-  return {
-    kind: "trend",
-    tone,
-    title: falling ? "Trending down" : "Trending up",
-    body: `Over the last 30 days you've averaged ${signed(dSys)}/${signed(dDia)} mmHg compared with the 30 days before.`,
-  };
+  return null;
 }
 
 function timeOfDayInsight(sessions: readonly BpSession[], today: string): Insight | null {

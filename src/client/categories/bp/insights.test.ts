@@ -47,6 +47,21 @@ describe("bpInsights", () => {
     });
   });
 
+  it("falls back to 90-day windows when data is sparse", () => {
+    const sessions = [
+      at(100, 20, 140, 90),
+      at(120, 20, 140, 90),
+      at(150, 20, 140, 90),
+      at(10, 20, 132, 84),
+      at(40, 20, 132, 84),
+      at(70, 20, 132, 84),
+    ];
+    expect(bpInsights(sessions, today).find((i) => i.kind === "trend")).toMatchObject({
+      title: "Trending down",
+      body: "Over the last 90 days you've averaged -8/-6 mmHg compared with the 90 days before.",
+    });
+  });
+
   it("calls small changes steady", () => {
     const sessions = [
       at(40, 7, 130, 80),

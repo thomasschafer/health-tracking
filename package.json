@@ -10,7 +10,7 @@
     "dev:server": "node --watch src/server/main.ts",
     "build": "vite build",
     "start": "node src/server/main.ts",
-    "typecheck": "tsc -p tsconfig.server.json && tsc -p tsconfig.client.json",
+    "typecheck": "tsc -p tsconfig.server.json && tsc -p tsconfig.client.json && tsc -p monitor/tsconfig.json",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -20,7 +20,8 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "backup:check": "scripts/check-backups.sh",
     "google:auth": "node scripts/google-auth.ts",
-    "import:sheet": "node scripts/import-sheet.ts"
+    "import:sheet": "node scripts/import-sheet.ts",
+    "monitor:deploy": "wrangler deploy --config monitor/wrangler.jsonc"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
@@ -35,6 +36,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@testing-library/dom": "^10.4.2",
@@ -54,7 +56,8 @@
     "typescript-eslint": "^8.71.2",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
   },
   "overrides": {
     "@esbuild-kit/core-utils": {
@@ -65,6 +68,7 @@
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "better-sqlite3@13.0.3": true,
-    "fsevents": false
+    "fsevents": false,
+    "workerd": false
   }
 }

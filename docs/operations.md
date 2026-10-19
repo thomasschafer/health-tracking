@@ -38,9 +38,11 @@ For a new person, or after losing the accounts. Do these in order; each takes a 
 5. **Check it.** Add a reading on the phone, then confirm backups work end to end with
    `scripts/check-backups.sh`. The app's
    Settings should show the cloud backup as verified.
-6. **Copies elsewhere.** In the app, use Export all data to save a first copy to Google Drive
+6. **Backup monitor.** Set up the [backup monitor](#backup-monitor), so you hear about it if
+   backups stop.
+7. **Copies elsewhere.** In the app, use Export all data to save a first copy to Google Drive
    or similar. The app reminds you every 30 days.
-7. **Optional:** set up the [automatic Google Drive export](#setting-up-the-automatic-google-drive-export-optional).
+8. **Optional:** set up the [automatic Google Drive export](#setting-up-the-automatic-google-drive-export-optional).
 
 To bring over existing data, restore the database from R2 or an export (see
 [Recovering data](#recovering-data)) before step 3 saves the settings file, or import the
@@ -113,6 +115,28 @@ Open `https://<machine>.<tailnet>.ts.net:8443` on the phone and add it to the ho
 5. Once replication is running, run
    `scripts/check-backups.sh` to confirm a
    restore works end to end.
+
+## Backup monitor
+
+A Cloudflare Worker (`monitor/` in this repo) checks once a day that the R2 backups are still
+being updated. Backups change at least daily while the laptop is awake, because the app's daily
+restore check writes to the database and Litestream takes a daily snapshot. If the newest file
+in the bucket is more than 72 hours old, the Worker creates a Todoist task, "Health tracking
+backups have stopped", and closes it again once backups resume.
+
+The Worker only lists file names and upload times in the bucket. It never reads the backups,
+which it couldn't decrypt anyway, and it has no public URL.
+
+To set it up, with Wrangler logged in to the account that owns the bucket (`npx wrangler login`):
+
+```sh
+npm run monitor:deploy
+npx wrangler secret put TODOIST_TOKEN --config monitor/wrangler.jsonc
+```
+
+The Todoist token is under Settings, Integrations, Developer in Todoist. Redeploy after changing
+anything in `monitor/`. To see recent runs, open the Worker in the Cloudflare dashboard and look
+at its logs.
 
 ## Setting up the automatic Google Drive export (optional)
 

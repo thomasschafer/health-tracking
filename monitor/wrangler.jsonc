@@ -1,0 +1,13 @@
+{
+  // Daily check that the R2 backups are still being updated (see docs/operations.md).
+  "name": "health-tracking-backup-monitor",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // No public URL: the Worker only runs on its schedule.
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": { "crons": ["17 9 * * *"] },
+  "r2_buckets": [{ "binding": "BACKUPS", "bucket_name": "health-tracking-backups" }],
+  "vars": { "STALE_AFTER_HOURS": "72" },
+  "observability": { "enabled": true },
+}

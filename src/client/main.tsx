@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { BpHistoryPage } from "./categories/bp/BpHistoryPage.tsx";
 import { BpOverviewPage } from "./categories/bp/BpOverviewPage.tsx";
 import { BpReportPage } from "./categories/bp/BpReportPage.tsx";
-import { EditBpSessionPage, NewBpSessionPage } from "./categories/bp/entry/EntryFlow.tsx";
+import { EditBpSessionPage, NewBpSessionPage } from "./categories/bp/entry/EntryPages.tsx";
 import { DataProvider } from "./data.tsx";
 import { BrowsePage } from "./pages/BrowsePage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";

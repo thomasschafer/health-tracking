@@ -1,4 +1,4 @@
-import { CloudCheck, Plus } from "lucide-react";
+import { CloudCheck } from "lucide-react";
 import { Link } from "react-router";
 import { useData } from "../data.tsx";
 import { formatAgo } from "../format.ts";
@@ -43,26 +43,11 @@ function BackupFooter() {
 
 export function SummaryPage() {
   const now = new Date();
-  const primary = CATEGORIES[0];
   return (
     <Page
       title="Summary"
       subtitle={`${greeting(now)} · ${dateFormat.format(now)}`}
-      action={
-        <div className="header-actions">
-          <NotificationCentre />
-          {primary !== undefined && (
-            <Link
-              to={primary.newEntryPath}
-              className="round-button bp"
-              aria-label={`New ${primary.name.toLowerCase()} reading`}
-              viewTransition
-            >
-              <Plus size={24} strokeWidth={2.4} aria-hidden="true" />
-            </Link>
-          )}
-        </div>
-      }
+      action={<NotificationCentre />}
     >
       <div className="summary-cards">
         {CATEGORIES.map(({ id, SummaryCard }) => (

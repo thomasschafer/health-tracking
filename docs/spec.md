@@ -23,7 +23,9 @@ Sheet that was edited by hand.
 ## Screens
 
 - Summary shows a card per health category (latest value, trend sparkline, status) and the most
-  noteworthy insights. Blood pressure is the first category; others plug into the same
+  noteworthy insights. Each card has its own Log button, so adding a reading is one tap from
+  Summary and it's always clear what is being added. On Android, long-pressing the app icon
+  also offers "New blood pressure reading". Blood pressure is the first category; others plug into the same
   structure.
 - The blood pressure overview has a chart of daily, weekly or monthly averages drawn as bars
   from diastolic to systolic, which can be scrubbed to inspect values. It also has morning and

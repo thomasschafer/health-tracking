@@ -10,8 +10,9 @@ keep it consistent as categories are added.
 - One identity colour per category (`--bp` for blood pressure), used for its icon, chart marks
   and primary buttons. Status colours (good, warning, serious, critical) are reserved for health
   status and always come with a label.
-- Fast entry. Logging is reachable in one tap from Summary and the category page, uses an
-  in-app keypad, and moves between fields on its own.
+- Fast entry. Logging is one tap from the category's Summary card (its Log button) or the
+  category page, uses an in-app keypad, and moves between fields on its own. Generic "add"
+  buttons that don't say what they add are avoided.
 - Never lose data silently. Unsynced readings and backup problems show as notices that can't be
   dismissed. Drafts survive the app closing.
 - Motion is short (under 300ms), eases out, and is disabled for reduced-motion users.

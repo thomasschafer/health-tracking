@@ -34,6 +34,15 @@ export default defineConfig({
         // Manifests can't vary by colour scheme, so they match the dark theme.
         background_color: "#000000",
         theme_color: "#000000",
+        // Long-pressing the app icon on Android offers these.
+        shortcuts: [
+          {
+            name: "New blood pressure reading",
+            short_name: "New reading",
+            url: "/bp/new",
+            icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+        ],
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

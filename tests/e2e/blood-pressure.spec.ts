@@ -327,3 +327,16 @@ test.describe("exporting", () => {
     expect((await download).suggestedFilename()).toMatch(/^health-export-.*\.json\.txt$/);
   });
 });
+
+test("logs from the summary card or opens the category", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "New blood pressure reading" }).click();
+  await expect(page).toHaveURL("/bp/new");
+  await page.goto("/");
+  // Tapping anywhere else on the card opens the overview.
+  const card = page.locator(".summary-card");
+  const box = await card.boundingBox();
+  if (box === null) throw new Error("Summary card not rendered");
+  await card.click({ position: { x: 24, y: box.height - 16 } });
+  await expect(page).toHaveURL("/bp");
+});

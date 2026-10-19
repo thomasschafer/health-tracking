@@ -1,8 +1,8 @@
-import { ChevronRight, HeartPulse } from "lucide-react";
+import { ChevronRight, HeartPulse, Plus } from "lucide-react";
+import { Link } from "react-router";
 import { averageReadings, summariseWindow } from "../../../shared/bp.ts";
 import { useData } from "../../data.tsx";
 import { formatAgo, formatBp } from "../../format.ts";
-import { Card } from "../../ui/Card.tsx";
 import { PeriodIcon } from "./SessionRow.tsx";
 import { StatusPill } from "./StatusPill.tsx";
 
@@ -41,16 +41,24 @@ export function BpSummaryCard() {
   const week = summariseWindow(sessions, new Date(), 7);
 
   return (
-    <Card to="/bp" className="summary-card" label="Blood pressure">
+    // The whole card opens the overview through a stretched link, with the Log button above it
+    // so the two never nest (a link inside a link isn't valid).
+    <div className="card summary-card">
       <div className="summary-card-header">
-        <span className="category-name bp">
+        <Link to="/bp" className="category-name bp stretched-link" viewTransition>
           <HeartPulse size={18} aria-hidden="true" />
           Blood pressure
-        </span>
-        <span className="summary-card-meta">
-          {latest !== undefined && formatAgo(latest.takenAt)}
-          <ChevronRight size={16} aria-hidden="true" />
-        </span>
+          <ChevronRight size={16} className="summary-card-chevron" aria-hidden="true" />
+        </Link>
+        <Link
+          to="/bp/new"
+          className="log-button"
+          aria-label="New blood pressure reading"
+          viewTransition
+        >
+          <Plus size={16} strokeWidth={2.6} aria-hidden="true" />
+          Log
+        </Link>
       </div>
       {latest === undefined ? (
         <p className="summary-empty">No readings yet</p>
@@ -58,7 +66,8 @@ export function BpSummaryCard() {
         <div className="summary-card-body">
           <div>
             <span className="summary-label">
-              <PeriodIcon takenAt={new Date(latest.takenAt)} size={14} /> Latest
+              <PeriodIcon takenAt={new Date(latest.takenAt)} size={14} /> Latest ·{" "}
+              {formatAgo(latest.takenAt)}
             </span>
             <span className="summary-value rounded-nums">
               {formatBp(averageReadings(latest.readings))}
@@ -80,6 +89,6 @@ export function BpSummaryCard() {
           <StatusPill average={week.all.average} />
         </div>
       )}
-    </Card>
+    </div>
   );
 }

@@ -1901,3 +1901,44 @@
 .sheet:focus {
   outline: none;
 }
+
+/* Summary cards open their category through a stretched link; buttons sit above it. */
+.summary-card {
+  position: relative;
+  transition: transform 160ms var(--ease);
+}
+
+.summary-card:has(.stretched-link:active) {
+  transform: scale(0.98);
+}
+
+.stretched-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.summary-card-chevron {
+  color: var(--text-3);
+}
+
+.log-button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 14px 0 10px;
+  border-radius: 999px;
+  background: var(--bp-tint);
+  color: var(--bp);
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 120ms var(--ease);
+}
+
+.log-button:active {
+  transform: scale(0.94);
+}

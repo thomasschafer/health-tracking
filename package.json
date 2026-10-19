@@ -18,7 +18,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
-    "backup:check": "node scripts/backup-check.ts",
+    "backup:check": "scripts/check-backups.sh",
     "google:auth": "node scripts/google-auth.ts",
     "import:sheet": "node scripts/import-sheet.ts"
   },

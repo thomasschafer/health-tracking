@@ -4,10 +4,11 @@ How to run the app on the laptop, set up backups, and recover data.
 
 ## Setting up a new machine
 
-On a Mac set up with [dotfiles](https://github.com/thomasschafer/dotfiles), `./setup.sh personal`
-does everything: it clones this repo, builds it, installs the background services (below) and
-runs `scripts/setup-machine.sh`. Without dotfiles, clone and build the repo yourself, then run
-that script.
+With the accounts below already set up, this is mostly automatic. On a Mac set up with
+[dotfiles](https://github.com/thomasschafer/dotfiles), `./setup.sh personal` clones this repo,
+builds it, installs the background services (see [Running](#running)) and runs
+`scripts/setup-machine.sh`. Without dotfiles, install Node 26, clone and build the repo
+(`npm ci && npm run build`), then run that script.
 
 `scripts/setup-machine.sh` asks for the settings file (`~/.config/health-tracking/env`): paste
 a saved copy, or enter the R2 details. It restores the database from R2, then saves the
@@ -17,8 +18,33 @@ Keep a copy of the settings file in your password manager (as a secure note): ev
 in it, so a new machine only needs it pasted in. The one secret that can't be recreated is
 `LITESTREAM_SSE_CUSTOMER_KEY`; without it, the R2 backups can't be read.
 
-For a brand new setup, create the R2 bucket and token first (see
-[Setting up Cloudflare R2](#setting-up-cloudflare-r2)).
+## Starting from nothing
+
+For a new person, or after losing the accounts. Do these in order; each takes a few minutes.
+
+1. **Tailscale.** Create a tailnet at tailscale.com and turn on MagicDNS and HTTPS
+   certificates (both under DNS in the admin console; HTTPS is needed for the PWA). Install
+   Tailscale on the Mac and the phone and sign both in.
+2. **Cloudflare R2.** Create a Cloudflare account and follow
+   [Setting up Cloudflare R2](#setting-up-cloudflare-r2) to create the bucket and an API token.
+   Don't create an encryption key yet; the next step does.
+3. **The Mac.** Set it up as in [Setting up a new machine](#setting-up-a-new-machine). When
+   `scripts/setup-machine.sh` asks for the settings file, choose to enter the R2 details and
+   leave the encryption key blank to generate one. Save the key it prints, and then the whole
+   settings file, in your password manager straight away.
+4. **The phone.** Open the address the setup script prints
+   (`https://<machine>.<tailnet>.ts.net:8443`) and add it to the home screen: Share, then Add
+   to Home Screen on iPhone; the menu, then Add to Home screen on Android.
+5. **Check it.** Add a reading on the phone, then confirm backups work end to end with
+   `scripts/check-backups.sh`. The app's
+   Settings should show the cloud backup as verified.
+6. **Copies elsewhere.** In the app, use Export all data to save a first copy to Google Drive
+   or similar. The app reminds you every 30 days.
+7. **Optional:** set up the [automatic Google Drive export](#setting-up-the-automatic-google-drive-export-optional).
+
+To bring over existing data, restore the database from R2 or an export (see
+[Recovering data](#recovering-data)) before step 3 saves the settings file, or import the
+original sheet (see [Importing from the original sheet](#importing-from-the-original-sheet)).
 
 ## Data and configuration locations
 
@@ -60,7 +86,8 @@ They start at login, restart if they crash, and only run once the settings file 
 everything else, they pause while the Mac sleeps and catch up when it wakes.
 
 To ship changes, run `scripts/deploy.sh`: it rebuilds the app and restarts the server.
-Phones pick up the new version the next time the app is opened ("A new version is ready").
+Phones install the new version by themselves at the next safe moment, such as when the app is
+next opened.
 
 The app listens on `127.0.0.1:8787` only. Tailscale Serve exposes it over HTTPS (needed for the
 PWA), which `scripts/setup-machine.sh` sets up:
@@ -78,13 +105,13 @@ Open `https://<machine>.<tailnet>.ts.net:8443` on the phone and add it to the ho
    `npx wrangler r2 bucket create health-tracking-backups --location weur`.
 2. Create an R2 API token with "Object Read & Write" on that bucket only. Note the access key
    ID, secret access key and your account ID.
-3. Generate an encryption key and save it in your password manager as well as the env file:
-   `openssl rand -base64 32`.
+3. Have an encryption key for the backups: `scripts/setup-machine.sh` generates one if you
+   leave it blank, or use `openssl rand -base64 32`. Save it in your password manager.
 4. Run `scripts/setup-machine.sh` and choose to enter the R2 details, or add them to the
    settings file yourself (see the variables above; `LITESTREAM_CONFIG` points at
    `deploy/litestream.yml` in this repo).
 5. Once replication is running, run
-   `node --env-file="$HOME/.config/health-tracking/env" scripts/backup-check.ts` to confirm a
+   `scripts/check-backups.sh` to confirm a
    restore works end to end.
 
 ## Setting up the automatic Google Drive export (optional)

@@ -4,24 +4,19 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-label="org.nix-community.home.health-tracking-server"
+# shellcheck source=lib.sh
+source "$root/scripts/lib.sh"
 
-plist="$HOME/Library/LaunchAgents/$label.plist"
-if [ -f "$plist" ]; then
-    # Build with the same Node as the service: native modules only load under the Node
-    # version they were built for.
-    PATH="$(plutil -extract EnvironmentVariables.PATH raw "$plist"):$PATH"
-    export PATH
-fi
+use_service_path
 echo "Building with Node $(node --version)"
 
 cd "$root"
 npm ci --no-audit --no-fund
 npm run build
 
-if launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
-    launchctl kickstart -k "gui/$(id -u)/$label"
-    echo "Restarted $label."
+if launchctl print "gui/$(id -u)/$SERVER_LABEL" >/dev/null 2>&1; then
+    launchctl kickstart -k "gui/$(id -u)/$SERVER_LABEL"
+    echo "Restarted $SERVER_LABEL."
 else
     echo "The background server isn't installed (see docs/operations.md); start it with scripts/start-server.sh." >&2
 fi

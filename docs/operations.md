@@ -6,7 +6,7 @@ How to run the app on the laptop, set up backups, and recover data.
 
 With the accounts below already set up, this is mostly automatic. On a Mac set up with
 [dotfiles](https://github.com/thomasschafer/dotfiles), `./setup.sh personal` clones this repo,
-builds it, installs the background services (see [Running](#running)) and runs
+deploys it, installs the background services (see [Running](#running)) and runs
 `scripts/setup-machine.sh`. Without dotfiles, install Node 26, clone and build the repo
 (`npm ci && npm run build`), then run that script.
 
@@ -77,7 +77,8 @@ Nothing in these locations may ever be committed. The repo is public.
 
 ## Running
 
-Two launchd agents, defined in dotfiles, keep things running:
+Two launchd agents, defined in dotfiles, keep things running. With dotfiles, they run the
+latest deployed commit (see below) rather than this checkout:
 
 | Service                                     | Label                                               | Log                                             |
 | ------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
@@ -87,9 +88,12 @@ Two launchd agents, defined in dotfiles, keep things running:
 They start at login, restart if they crash, and only run once the settings file exists. Like
 everything else, they pause while the Mac sleeps and catch up when it wakes.
 
-To ship changes, run `scripts/deploy.sh`: it rebuilds the app and restarts the server.
-Phones install the new version by themselves at the next safe moment, such as when the app is
-next opened.
+To ship changes, commit them, then run `deploy health-tracking` (from dotfiles). It builds `main`
+in a fresh copy under `~/.local/share/deploys/health-tracking`, and only switches to it and
+restarts both services if the build succeeds. `deploy health-tracking <ref>` deploys another
+commit, such as an older one to roll back. Without dotfiles, run `npm run build` and restart
+the server. Phones install the new version by themselves at the next safe moment, such as when
+the app is next opened.
 
 The app listens on `127.0.0.1:8787` only. Tailscale Serve exposes it over HTTPS (needed for the
 PWA), which `scripts/setup-machine.sh` sets up:

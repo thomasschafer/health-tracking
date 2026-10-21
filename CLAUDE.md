@@ -19,5 +19,4 @@ This app is maintained by agents, so keep it easy to change safely.
 - Follow `docs/design.md` for UI work, and check visual changes with `scripts/screenshots.ts`
   in light and dark mode before committing.
 - Keep the docs in `docs/` current when behaviour changes.
-- Before pushing, run `npm run check`, then `npm run build && npm run test:e2e`. After
-  pushing, run `scripts/deploy.sh` on the serving Mac so the change goes live.
+- Before pushing, run `npm run check`, then `npm run build && npm run test:e2e`.

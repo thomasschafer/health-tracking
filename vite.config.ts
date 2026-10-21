@@ -2,6 +2,7 @@ import react from "@vitejs/plugin-react";
 import { execFileSync } from "node:child_process";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { DEV_API_PORT } from "./scripts/dev.ts";
 
 function appVersion(): string {
   const commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
@@ -16,7 +17,8 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   build: { outDir: "dist/client", emptyOutDir: true },
   server: {
-    proxy: { "/api": "http://127.0.0.1:8787" },
+    // Matches scripts/dev-server.ts.
+    proxy: { "/api": `http://127.0.0.1:${process.env["HEALTH_PORT"] ?? String(DEV_API_PORT)}` },
   },
   plugins: [
     react(),

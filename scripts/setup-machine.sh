@@ -101,7 +101,9 @@ create_env() {
     esac
 }
 
-mkdir -p -m 700 "$config_dir" "$data_dir"
+mkdir -p "$config_dir" "$data_dir"
+# Separately from mkdir, whose -m only applies to directories it creates.
+chmod 700 "$config_dir" "$data_dir"
 
 umask 077
 

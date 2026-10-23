@@ -11,12 +11,14 @@ deploys it, installs the background services (see [Running](#running)) and runs
 (`npm ci && npm run build`), then run that script.
 
 `scripts/setup-machine.sh` asks for the settings file (`~/.config/health-tracking/env`): paste
-a saved copy, or enter the R2 details. It restores the database from R2, then saves the
-settings, and finally offers to serve the app over Tailscale. It is safe to re-run.
+a saved copy, or enter the R2 details. It stores the credentials in the login keychain (see
+[Credentials](#credentials)) and the rest in the settings file, restores the database from R2,
+then saves the settings, and finally offers to serve the app over Tailscale. It is safe to
+re-run.
 
-Keep a copy of the settings file in your password manager (as a secure note): every secret is
-in it, so a new machine only needs it pasted in. The one secret that can't be recreated is
-`LITESTREAM_SSE_CUSTOMER_KEY`; without it, the R2 backups can't be read.
+Keep a copy of the settings file with the credentials filled in in your password manager (as a
+secure note), so a new machine only needs it pasted in. The one secret that can't be recreated
+is `LITESTREAM_SSE_CUSTOMER_KEY`; without it, the R2 backups can't be read.
 
 ## Starting from nothing
 
@@ -30,8 +32,8 @@ For a new person, or after losing the accounts. Do these in order; each takes a 
    Don't create an encryption key yet; the next step does.
 3. **The Mac.** Set it up as in [Setting up a new machine](#setting-up-a-new-machine). When
    `scripts/setup-machine.sh` asks for the settings file, choose to enter the R2 details and
-   leave the encryption key blank to generate one. Save the key it prints, and then the whole
-   settings file, in your password manager straight away.
+   leave the encryption key blank to generate one. Save the key it prints in your password
+   manager straight away, then the settings file with the credentials filled in.
 4. **The phone.** Open the address the setup script prints
    (`https://<machine>.<tailnet>.ts.net:8443`) and add it to the home screen: Share, then Add
    to Home Screen on iPhone; the menu, then Add to Home screen on Android.
@@ -54,7 +56,8 @@ original sheet (see [Importing from the original sheet](#importing-from-the-orig
 | ------------------ | ---------------------------------------------------------------------------- |
 | Database           | `~/.local/share/health-tracking/health.db` (override with `HEALTH_DATA_DIR`) |
 | Pre-import backups | `~/.local/share/health-tracking/backups/`                                    |
-| Environment file   | `~/.config/health-tracking/env` (suggested)                                  |
+| Environment file   | `~/.config/health-tracking/env` (suggested; no credentials)                  |
+| Credentials        | The login keychain, as `health-tracking.<variable>`                          |
 | Litestream config  | `deploy/litestream.yml` in this repo (no secrets)                            |
 | Service logs       | `~/.local/state/health-tracking/`                                            |
 
@@ -74,6 +77,25 @@ Nothing in these locations may ever be committed. The repo is public.
 | `LITESTREAM_SSE_CUSTOMER_KEY`                                                        | Encryption key for the R2 objects. Keep a copy off the laptop.          |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` | Enable the daily Drive export. All three or none.                       |
 | `HEALTH_BACKUP_CHECK_INTERVAL_HOURS`                                                 | How often backup checks run. Defaults to 24.                            |
+
+### Credentials
+
+The `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY`, `LITESTREAM_SSE_CUSTOMER_KEY` and
+`GOOGLE_OAUTH_*` variables are credentials. They live in the login keychain, one item per
+variable named `health-tracking.<variable>`, rather than in the environment file, so they aren't
+stored in plain text or picked up by backups of `~/.config`. The scripts that start the
+background services read them from there, and refuse to start if the environment file holds
+any, so a stale copy can't be used without anyone noticing.
+
+- `scripts/set-credential.sh <variable>` stores or replaces one, from a hidden prompt.
+  `scripts/set-credential.sh --delete <variable>` removes one, e.g. to turn off the Drive export.
+- `scripts/with-env.sh <command>` runs a command with the settings and credentials, as the
+  background services have them.
+- `scripts/setup-machine.sh` moves any credentials it finds in the environment file into the
+  keychain, as on a machine set up before they moved there. It first asks you to confirm that
+  `LITESTREAM_SSE_CUSTOMER_KEY` is saved off the Mac, as the keychain only lives on this Mac.
+  Services already running keep the credentials they started with, so do this before deploying
+  a version that reads the keychain.
 
 ## Running
 
@@ -113,8 +135,9 @@ Open `https://<machine>.<tailnet>.ts.net:8443` on the phone and add it to the ho
    ID, secret access key and your account ID.
 3. Have an encryption key for the backups: `scripts/setup-machine.sh` generates one if you
    leave it blank, or use `openssl rand -base64 32`. Save it in your password manager.
-4. Run `scripts/setup-machine.sh` and choose to enter the R2 details, or add them to the
-   settings file yourself (see the variables above; `LITESTREAM_CONFIG` points at
+4. Run `scripts/setup-machine.sh` and choose to enter the R2 details, or add the settings to
+   the settings file and the credentials to the keychain yourself (see
+   [Environment variables](#environment-variables); `LITESTREAM_CONFIG` points at
    `deploy/litestream.yml` in this repo).
 5. Once replication is running, run
    `scripts/check-backups.sh` to confirm a
@@ -151,9 +174,12 @@ This is off by default; "Export all data" in Settings covers saving copies to Dr
 2. Publish the consent screen to production. Apps left in testing mode have refresh tokens that
    expire after 7 days. The app only asks for the `drive.file` scope (files it created itself),
    so publishing doesn't need Google's verification.
-3. Create an OAuth client of type "Desktop app" and put its ID and secret in the env file.
-4. Run `npm run google:auth` with that environment, approve access in the browser, and add the
-   printed `GOOGLE_OAUTH_REFRESH_TOKEN` to the env file.
+3. Create an OAuth client of type "Desktop app" and store its ID and secret with
+   `scripts/set-credential.sh GOOGLE_OAUTH_CLIENT_ID` and
+   `scripts/set-credential.sh GOOGLE_OAUTH_CLIENT_SECRET`.
+4. Run `scripts/with-env.sh npm run google:auth`, approve access in the browser, and store the
+   printed `GOOGLE_OAUTH_REFRESH_TOKEN` with
+   `scripts/set-credential.sh GOOGLE_OAUTH_REFRESH_TOKEN`.
 5. Run `npm run backup:check` to upload and verify the first export. Files appear in a Drive
    folder called "Health tracking exports".
 
@@ -162,10 +188,9 @@ This is off by default; "Export all data" in Settings covers saving copies to Dr
 From R2, if the laptop is lost or the database is damaged:
 
 ```sh
-set -a; source ~/.config/health-tracking/env; set +a
-litestream restore -config "$LITESTREAM_CONFIG" \
+scripts/with-env.sh sh -c 'litestream restore -config "$LITESTREAM_CONFIG" \
   -o ~/.local/share/health-tracking/health.db \
-  ~/.local/share/health-tracking/health.db
+  ~/.local/share/health-tracking/health.db'
 ```
 
 Add `-timestamp 2026-10-17T20:00:00Z` to restore to a point in time.

@@ -4,7 +4,8 @@ import { z } from "zod";
 import { DRIVE_SCOPE } from "../src/server/backup/drive.ts";
 
 // One-off helper that runs Google's OAuth flow for a desktop app and prints a refresh token for
-// GOOGLE_OAUTH_REFRESH_TOKEN. Needs GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET set.
+// GOOGLE_OAUTH_REFRESH_TOKEN. Needs GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET set, so
+// run it with scripts/with-env.sh.
 
 const env = z
   .object({

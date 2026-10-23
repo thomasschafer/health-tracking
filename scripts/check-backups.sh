@@ -8,5 +8,6 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 source "$root/scripts/lib.sh"
 
 use_service_path
+load_env
 cd "$root"
-exec node --env-file="$ENV_FILE" scripts/backup-check.ts
+exec node scripts/backup-check.ts

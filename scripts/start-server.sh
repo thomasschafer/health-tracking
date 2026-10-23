@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Starts the health server with the private environment file, for use by launchd or by hand.
+# Starts the health server with the private settings and credentials, for use by launchd or by
+# hand.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-env_file="${HEALTH_ENV_FILE:-$HOME/.config/health-tracking/env}"
+# shellcheck source=lib.sh
+source "$root/scripts/lib.sh"
 
 if [[ ! -f "$root/dist/client/index.html" ]]; then
   echo "No client build found. Run npm run build in $root first." >&2
@@ -17,5 +19,6 @@ if [ "$node_major" != "$required_major" ]; then
     exit 1
 fi
 
+load_env
 cd "$root"
-exec node --env-file-if-exists="$env_file" src/server/main.ts
+exec node src/server/main.ts

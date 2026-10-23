@@ -14,8 +14,12 @@ const envSchema = z.object({
     .default(join(homedir(), ".local", "share", "health-tracking")),
   HEALTH_HOST: z.string().min(1).default("127.0.0.1"),
   HEALTH_PORT: z.coerce.number().int().min(1).max(65535).default(8787),
-  /** When set, API requests must come through Tailscale Serve as this login. */
-  HEALTH_ALLOWED_TAILSCALE_LOGIN: optionalNonEmpty,
+  /**
+   * "tailscale" only accepts API requests that Tailscale Serve forwards from the tailnet user this
+   * machine is logged in as. "none" accepts anything that reaches the port, for development and
+   * tests.
+   */
+  HEALTH_AUTH: z.enum(["tailscale", "none"]).default("tailscale"),
   /** Path to the Litestream config. Replica verification is disabled when unset. */
   LITESTREAM_CONFIG: optionalNonEmpty,
   LITESTREAM_BIN: z.string().min(1).default("litestream"),
@@ -36,7 +40,7 @@ export interface Config {
   databasePath: string;
   host: string;
   port: number;
-  allowedTailscaleLogin: string | null;
+  auth: "tailscale" | "none";
   litestream: { bin: string; configPath: string } | null;
   google: GoogleCredentials | null;
   backupCheckIntervalHours: number;
@@ -60,7 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     databasePath: join(parsed.HEALTH_DATA_DIR, "health.db"),
     host: parsed.HEALTH_HOST,
     port: parsed.HEALTH_PORT,
-    allowedTailscaleLogin: parsed.HEALTH_ALLOWED_TAILSCALE_LOGIN ?? null,
+    auth: parsed.HEALTH_AUTH,
     litestream:
       parsed.LITESTREAM_CONFIG === undefined
         ? null

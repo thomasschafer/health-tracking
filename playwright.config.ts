@@ -30,6 +30,7 @@ export default defineConfig({
     env: {
       HEALTH_DATA_DIR: mkdtempSync(join(tmpdir(), "health-e2e-")),
       HEALTH_PORT: String(PORT),
+      HEALTH_AUTH: "none",
     },
   },
 });

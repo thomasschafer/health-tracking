@@ -21,6 +21,8 @@ npm run build && npm run test:e2e
 ```
 
 Development uses its own port and data directory, so it never touches a running copy of the
-app, its database or its backups. Set `HEALTH_PORT` or `HEALTH_DATA_DIR` to override them.
+app, its database or its backups. Set `HEALTH_PORT` or `HEALTH_DATA_DIR` to override them. It
+also accepts any request, rather than only those Tailscale Serve forwards from your login (see
+`HEALTH_AUTH` in [Operations](docs/operations.md#environment-variables)).
 
 This repository is public. Never commit health data, databases, exports or credentials.

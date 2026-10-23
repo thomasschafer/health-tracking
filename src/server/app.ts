@@ -27,6 +27,7 @@ export interface AppDeps {
   db: Db;
   now: () => Date;
   backupStatus: () => BackupStatus;
+  /** The only tailnet login allowed to use the API, or null to allow any request. */
   allowedTailscaleLogin: string | null;
   /** Directory containing the built client, or null to serve the API only. */
   clientDir: string | null;

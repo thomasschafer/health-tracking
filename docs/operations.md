@@ -13,8 +13,7 @@ deploys it, installs the background services (see [Running](#running)) and runs
 `scripts/setup-machine.sh` asks for the settings file (`~/.config/health-tracking/env`): paste
 a saved copy, or enter the R2 details. It stores the credentials in the login keychain (see
 [Credentials](#credentials)) and the rest in the settings file, restores the database from R2,
-then saves the settings, and finally offers to serve the app over Tailscale. It is safe to
-re-run.
+then saves the settings. It is safe to re-run.
 
 Keep a copy of the settings file with the credentials filled in in your password manager (as a
 secure note), so a new machine only needs it pasted in. The one secret that can't be recreated
@@ -34,8 +33,8 @@ For a new person, or after losing the accounts. Do these in order; each takes a 
    `scripts/setup-machine.sh` asks for the settings file, choose to enter the R2 details and
    leave the encryption key blank to generate one. Save the key it prints in your password
    manager straight away, then the settings file with the credentials filled in.
-4. **The phone.** Open the address the setup script prints
-   (`https://<machine>.<tailnet>.ts.net:8443`) and add it to the home screen: Share, then Add
+4. **The phone.** Open the app's address, which dotfiles' setup prints
+   (`https://<machine>.<tailnet>.ts.net:8443`), and add it to the home screen: Share, then Add
    to Home Screen on iPhone; the menu, then Add to Home screen on Android.
 5. **Check it.** Add a reading on the phone, then confirm backups work end to end with
    `scripts/check-backups.sh`. The app's
@@ -65,18 +64,18 @@ Nothing in these locations may ever be committed. The repo is public.
 
 ## Environment variables
 
-| Variable                                                                             | Purpose                                                                 |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `HEALTH_DATA_DIR`                                                                    | Where the database lives. Defaults to `~/.local/share/health-tracking`. |
-| `HEALTH_HOST`, `HEALTH_PORT`                                                         | Listen address. Defaults to `127.0.0.1:8787`; keep it on localhost.     |
-| `HEALTH_ALLOWED_TAILSCALE_LOGIN`                                                     | Optional. Only API requests from this Tailscale login are allowed.      |
-| `LITESTREAM_CONFIG`                                                                  | Path to the Litestream config. Enables replica checks.                  |
-| `LITESTREAM_ENDPOINT`                                                                | R2 endpoint, `https://<account ID>.r2.cloudflarestorage.com`.           |
-| `LITESTREAM_BIN`                                                                     | Litestream binary. Defaults to `litestream` on the `PATH`.              |
-| `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY`                           | R2 API token, read by Litestream.                                       |
-| `LITESTREAM_SSE_CUSTOMER_KEY`                                                        | Encryption key for the R2 objects. Keep a copy off the laptop.          |
-| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` | Enable the daily Drive export. All three or none.                       |
-| `HEALTH_BACKUP_CHECK_INTERVAL_HOURS`                                                 | How often backup checks run. Defaults to 24.                            |
+| Variable                                                                             | Purpose                                                                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `HEALTH_DATA_DIR`                                                                    | Where the database lives. Defaults to `~/.local/share/health-tracking`.                                 |
+| `HEALTH_HOST`, `HEALTH_PORT`                                                         | Listen address. Defaults to `127.0.0.1:8787`; keep it on localhost.                                     |
+| `HEALTH_AUTH`                                                                        | `tailscale` (default): only API requests from this Mac's Tailscale login. `none`: any, for development. |
+| `LITESTREAM_CONFIG`                                                                  | Path to the Litestream config. Enables replica checks.                                                  |
+| `LITESTREAM_ENDPOINT`                                                                | R2 endpoint, `https://<account ID>.r2.cloudflarestorage.com`.                                           |
+| `LITESTREAM_BIN`                                                                     | Litestream binary. Defaults to `litestream` on the `PATH`.                                              |
+| `LITESTREAM_ACCESS_KEY_ID`, `LITESTREAM_SECRET_ACCESS_KEY`                           | R2 API token, read by Litestream.                                                                       |
+| `LITESTREAM_SSE_CUSTOMER_KEY`                                                        | Encryption key for the R2 objects. Keep a copy off the laptop.                                          |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` | Enable the daily Drive export. All three or none.                                                       |
+| `HEALTH_BACKUP_CHECK_INTERVAL_HOURS`                                                 | How often backup checks run. Defaults to 24.                                                            |
 
 ### Credentials
 
@@ -118,13 +117,18 @@ the server. Phones install the new version by themselves at the next safe moment
 the app is next opened.
 
 The app listens on `127.0.0.1:8787` only. Tailscale Serve exposes it over HTTPS (needed for the
-PWA), which `scripts/setup-machine.sh` sets up:
+PWA), which dotfiles sets up along with its other apps. Without dotfiles, run:
 
 ```sh
 tailscale serve --bg --https=8443 http://127.0.0.1:8787
 ```
 
 Open `https://<machine>.<tailnet>.ts.net:8443` on the phone and add it to the home screen.
+
+At startup, the server asks Tailscale which login this Mac is signed in as, and only answers API
+requests from that login. If Tailscale isn't running or logged in, the server exits, and launchd
+keeps restarting it until Tailscale is up. It runs the tailscale CLI inside the macOS app if
+that's installed, or else the one on the `PATH`.
 
 ## Setting up Cloudflare R2
 

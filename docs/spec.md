@@ -17,8 +17,8 @@ Sheet that was edited by hand.
   localhost only, and Tailscale Serve exposes it over HTTPS to devices on the tailnet.
 - The app is a PWA, installed to the phone's home screen. It opens without the laptop, showing
   the last data it fetched.
-- Single user, no login. Being on the tailnet is the access control, optionally tightened by
-  checking the Tailscale login header (`HEALTH_ALLOWED_TAILSCALE_LOGIN`).
+- Single user, no login. Tailscale is the access control: the server only answers API requests
+  that Tailscale Serve forwards from the login the laptop is signed in as.
 
 ## Screens
 

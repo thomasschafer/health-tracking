@@ -156,15 +156,33 @@ fi
 require_keys "$env_file" HEALTH_DATA_DIR LITESTREAM_CONFIG LITESTREAM_ENDPOINT
 require_credentials
 
+# Usage: serve_url
+# Prints the app's Tailscale Serve address, or nothing if it isn't served. Fails if Tailscale
+# can't say, rather than reporting that as not served.
+serve_url() {
+    local status
+    status="$(tailscale serve status 2>&1)" || {
+        printf '%s\n' "$status" >&2
+        return 1
+    }
+    grep -oE "^https://[^ ]+:$https_port( |$)" <<<"$status" | head -1 | tr -d ' ' || true
+}
+
 if command -v tailscale >/dev/null; then
-    if ! tailscale serve status 2>/dev/null | grep -q ":$https_port "; then
-        read -rp "Serve the app over Tailscale on port $https_port? [y/N] " answer
-        if [ "$answer" = y ] || [ "$answer" = Y ]; then
-            tailscale serve --bg --https="$https_port" "http://127.0.0.1:$port"
+    if url="$(serve_url)"; then
+        if [ -z "$url" ]; then
+            read -rp "Serve the app over Tailscale on port $https_port? [y/N] " answer
+            if [ "$answer" = y ] || [ "$answer" = Y ]; then
+                tailscale serve --bg --https="$https_port" "http://127.0.0.1:$port"
+                url="$(serve_url)" || die "Tailscale Serve was set up, but its status can't be read"
+            fi
         fi
+        if [ -n "$url" ]; then
+            say "open $url on your phone"
+        fi
+    else
+        echo "Warning: couldn't read Tailscale Serve's status (above), so it wasn't checked; run this again once Tailscale is working." >&2
     fi
-    url="$(tailscale serve status 2>/dev/null | grep -o "https://[^ ]*:$https_port" | head -1 || true)"
-    [ -n "$url" ] && say "open $url on your phone"
 else
     echo "Warning: Tailscale isn't installed, so the app is only reachable from this Mac." >&2
 fi

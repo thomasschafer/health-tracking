@@ -20,7 +20,7 @@ data_dir="$HOME/.local/share/health-tracking"
 port=8787
 https_port=8443
 
-say() { printf '\nhealth-tracking: %s\n' "$*"; }
+say() { printf 'health-tracking: %s\n' "$*"; }
 
 if [ ! -t 0 ]; then
     if [ ! -f "$env_file" ]; then

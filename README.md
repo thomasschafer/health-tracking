@@ -9,7 +9,7 @@ from a phone over Tailscale, and stores data in SQLite with verified off-site ba
 
 ## Development
 
-Requires Node 26.
+Requires Node 26 (`mise install` picks it up from `.tool-versions`).
 
 ```sh
 npm ci

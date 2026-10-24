@@ -19,4 +19,6 @@ This app is maintained by agents, so keep it easy to change safely.
 - Follow `docs/design.md` for UI work, and check visual changes with `scripts/screenshots.ts`
   in light and dark mode before committing.
 - Keep the docs in `docs/` current when behaviour changes.
+- The Node version is pinned in `.tool-versions`, which mise, CI and `scripts/start-server.sh`
+  all read. Change it there only.
 - Before pushing, run `npm run check`, then `npm run build && npm run test:e2e`.

@@ -43,6 +43,32 @@ async function jsonBody(c: Context): Promise<unknown> {
   }
 }
 
+function isJsonContentType(header: string | undefined): boolean {
+  const mediaType = header?.split(";")[0]?.trim().toLowerCase();
+  return mediaType === "application/json";
+}
+
+/**
+ * Whether a request came from the app's own pages, or from something other than a browser.
+ *
+ * Browsers send Sec-Fetch-Site on every request; older ones only send Origin. Clients that send
+ * neither (curl, scripts) aren't websites acting on the owner's behalf, so they're allowed.
+ */
+function isSameOrigin(req: Request): boolean {
+  const fetchSite = req.headers.get("Sec-Fetch-Site");
+  if (fetchSite !== null) return fetchSite === "same-origin" || fetchSite === "none";
+
+  const origin = req.headers.get("Origin");
+  if (origin === null) return true;
+  // Tailscale Serve keeps the browser's Host, and also sets X-Forwarded-Host to it and
+  // X-Forwarded-Proto to "https" (replacing any the client sent), while forwarding over plain
+  // HTTP. So the scheme has to come from the forwarded header for the origins to match.
+  const host = req.headers.get("X-Forwarded-Host") ?? req.headers.get("Host");
+  if (host === null) return false;
+  const proto = req.headers.get("X-Forwarded-Proto") ?? new URL(req.url).protocol.replace(/:$/, "");
+  return origin.toLowerCase() === `${proto}://${host}`.toLowerCase();
+}
+
 export function createApp(deps: AppDeps): Hono {
   const { db, now } = deps;
   const app = new Hono();
@@ -67,6 +93,23 @@ export function createApp(deps: AppDeps): Hono {
     const allowed = deps.allowedTailscaleLogin;
     if (allowed !== null && c.req.header("Tailscale-User-Login") !== allowed) {
       return c.json({ error: "Forbidden" }, 403);
+    }
+    await next();
+    return undefined;
+  });
+
+  // Tailscale identifies the device, not the website that made the request, so any page open in
+  // the owner's browser could otherwise send a "simple" text/plain POST holding JSON. Requiring
+  // JSON forces a CORS preflight for cross-origin requests, which the server never approves, and
+  // the origin check rejects cross-site requests outright.
+  api.use("*", async (c, next) => {
+    if (c.req.method === "GET" || c.req.method === "HEAD") {
+      await next();
+      return undefined;
+    }
+    if (!isSameOrigin(c.req.raw)) return c.json({ error: "Cross-site request refused" }, 403);
+    if (!isJsonContentType(c.req.header("Content-Type"))) {
+      return c.json({ error: "Content-Type must be application/json" }, 415);
     }
     await next();
     return undefined;

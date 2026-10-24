@@ -18,7 +18,9 @@ Sheet that was edited by hand.
 - The app is a PWA, installed to the phone's home screen. It opens without the laptop, showing
   the last data it fetched.
 - Single user, no login. Tailscale is the access control: the server only answers API requests
-  that Tailscale Serve forwards from the login the laptop is signed in as.
+  that Tailscale Serve forwards from the login the laptop is signed in as. Changes are only
+  accepted as JSON from the app's own pages, so other websites open in the same browser can't
+  make them.
 
 ## Screens
 

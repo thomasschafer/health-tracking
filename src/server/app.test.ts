@@ -21,6 +21,12 @@ const json = (method: string, payload: unknown, headers: Record<string, string> 
   body: JSON.stringify(payload),
 });
 
+/** A change with no body, as the client sends one. */
+const bodyless = (method: string, headers: Record<string, string> = {}) => ({
+  method,
+  headers: { "Content-Type": "application/json", ...headers },
+});
+
 let app: Hono;
 beforeEach(() => {
   app = createApp({
@@ -52,9 +58,9 @@ describe("blood pressure API", () => {
     expect(edited.status).toBe(200);
     expect(((await edited.json()) as { session: { note: string } }).session.note).toBe("edited");
 
-    expect((await app.request(`/api/bp/sessions/${id}`, { method: "DELETE" })).status).toBe(204);
+    expect((await app.request(`/api/bp/sessions/${id}`, bodyless("DELETE"))).status).toBe(204);
     expect((await app.request(`/api/bp/sessions/${id}`)).status).toBe(404);
-    expect((await app.request(`/api/bp/sessions/${id}/restore`, { method: "POST" })).status).toBe(
+    expect((await app.request(`/api/bp/sessions/${id}/restore`, bodyless("POST"))).status).toBe(
       200,
     );
     expect((await app.request(`/api/bp/sessions/${id}`)).status).toBe(200);
@@ -118,7 +124,7 @@ describe("export API", () => {
     const exported = (await res.json()) as { format: string; tables: { bp_sessions: unknown[] } };
     expect(exported.format).toBe("health-tracking-export");
     expect(exported.tables.bp_sessions).toHaveLength(1);
-    expect((await app.request("/api/manual-exports", { method: "POST" })).status).toBe(201);
+    expect((await app.request("/api/manual-exports", bodyless("POST"))).status).toBe(201);
   });
 });
 
@@ -162,5 +168,86 @@ describe("Tailscale login check", () => {
     expect((await app.request("/api/bp/sessions", other)).status).toBe(403);
     const me = { headers: { "Tailscale-User-Login": "me@example.com" } };
     expect((await app.request("/api/bp/sessions", me)).status).toBe(200);
+  });
+});
+
+describe("cross-site request protection", () => {
+  const host = "laptop.example.ts.net:8443";
+  // What Tailscale Serve forwards to the app: the browser's Host, plus forwarded headers.
+  const viaServe = { Host: host, "X-Forwarded-Host": host, "X-Forwarded-Proto": "https" };
+
+  it("refuses changes that aren't JSON, even without a body", async () => {
+    const res = await app.request("/api/bp/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(415);
+    expect((await app.request("/api/manual-exports", { method: "POST" })).status).toBe(415);
+    expect((await app.request(`/api/bp/sessions/${id}`, { method: "DELETE" })).status).toBe(415);
+    expect(await (await app.request("/api/bp/sessions")).json()).toEqual({
+      sessions: [],
+    });
+  });
+
+  it("accepts a JSON content type with parameters", async () => {
+    const res = await app.request("/api/bp/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it("refuses requests the browser marks as cross-site", async () => {
+    for (const site of ["cross-site", "same-site"]) {
+      const res = await app.request(
+        "/api/bp/sessions",
+        json("POST", body, { ...viaServe, "Sec-Fetch-Site": site, Origin: `https://${host}` }),
+      );
+      expect(res.status).toBe(403);
+    }
+    expect(
+      (
+        await app.request(
+          "/api/bp/sessions",
+          json("POST", body, { "Sec-Fetch-Site": "same-origin" }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (await app.request("/api/manual-exports", bodyless("POST", { "Sec-Fetch-Site": "none" })))
+        .status,
+    ).toBe(201);
+  });
+
+  it("refuses a cross-origin Origin when Sec-Fetch-Site is missing", async () => {
+    for (const origin of ["https://evil.example", `http://${host}`, "null"]) {
+      const res = await app.request(
+        "/api/bp/sessions",
+        json("POST", body, { ...viaServe, Origin: origin }),
+      );
+      expect(res.status).toBe(403);
+    }
+  });
+
+  it("accepts the app's own origin through Tailscale Serve", async () => {
+    const res = await app.request(
+      "http://127.0.0.1:8787/api/bp/sessions",
+      json("POST", body, { ...viaServe, Origin: `https://${host}` }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("accepts the app's own origin when not proxied", async () => {
+    const res = await app.request(
+      "http://127.0.0.1:8787/api/bp/sessions",
+      json("POST", body, { Host: "127.0.0.1:8787", Origin: "http://127.0.0.1:8787" }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("accepts non-browser requests, which send no Origin", async () => {
+    expect((await app.request("/api/bp/sessions", json("POST", body, viaServe))).status).toBe(201);
   });
 });

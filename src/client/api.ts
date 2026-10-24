@@ -30,6 +30,8 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
   let res: Response;
   try {
     const headers = new Headers(init.headers);
+    // The server refuses changes without it, even when there's no body, to block cross-site
+    // requests.
     headers.set("Content-Type", "application/json");
     // Without a timeout, requests to a sleeping laptop can hang for a long time before failing.
     res = await fetch(`/api${path}`, {
